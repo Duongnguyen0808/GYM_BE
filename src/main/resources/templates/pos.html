@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::content}, 'Bán hàng (POS)')}">
+
+<div th:fragment="content">
+
+    <form th:action="@{/pos}" th:object="${saleRequest}" method="post" id="posForm">
+
+        <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+        <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+
+        <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger">
+            <p th:each="err : ${#fields.globalErrors()}" th:text="${err}"></p>
+        </div>
+
+        <div class="row">
+
+            <div class="col-lg-5">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h5>Sản phẩm (Click để thêm)</h5>
+                    </div>
+                    <div class="card-body" style="max-height: 70vh; overflow-y: auto;">
+                        <div class="row g-2">
+                            <div class="col-md-6 col-lg-4" th:each="prod : ${products}">
+                                <div class="card h-100"
+                                     th:data-id="${prod.id}"
+                                     th:data-name="${prod.name}"
+                                     th:data-price="${prod.price}"
+                                     th:data-stock="${prod.stockQuantity}"
+                                     onclick="addToCart(this.dataset.id, this.dataset.name, this.dataset.price, this.dataset.stock)"
+                                     style="cursor: pointer;">
+                                    <div class="card-body p-2 text-center">
+                                        <h6 class="card-title fs-6 mb-1" th:text="${prod.name}"></h6>
+                                        <p class="card-text text-muted small" th:text="${#numbers.formatDecimal(prod.price, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></p>
+                                        <small class="text-info" th:text="'Tồn kho: ' + ${prod.stockQuantity}"></small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-7">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h5>Hóa đơn thanh toán</h5>
+                    </div>
+                    <div class="card-body">
+
+                        <div class="mb-3">
+                            <label for="memberId" class="form-label">Gán cho Hội viên (Tùy chọn)</label>
+                            <select th:field="*{memberId}" id="memberId" class="form-select">
+                                <option value="">-- Chọn hội viên (Khách vãng lai) --</option>
+                                <option th:each="mem : ${members}"
+                                        th:value="${mem.id}"
+                                        th:text="${mem.fullName} + ' - ' + ${mem.phoneNumber}"></option>
+                            </select>
+                        </div>
+
+                        <table class="table">
+                            <thead>
+                            <tr>
+                                <th>Sản phẩm</th>
+                                <th style="width: 120px;">Số lượng</th>
+                                <th>Đơn giá</th>
+                                <th class="text-end">Thành tiền</th>
+                            </tr>
+                            </thead>
+                            <tbody id="cart-table-body">
+                            </tbody>
+                            <tfoot>
+                            <tr class="fw-bold fs-5">
+                                <td colspan="3">TỔNG CỘNG</td>
+                                <td class="text-end" id="cart-total">0 VNĐ</td>
+                            </tr>
+                            </tfoot>
+                        </table>
+
+                        <div id="cart-hidden-inputs">
+                        </div>
+
+                        <div class="mt-4">
+                            <label class="form-label fw-bold">Hình thức thanh toán tại quầy:</label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" th:field="*{paymentMethod}" id="payCash" value="CASH" required>
+                                    <label class="form-check-label" for="payCash">Tiền mặt (CASH)</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" th:field="*{paymentMethod}" id="payCard" value="CREDIT_CARD" required>
+                                    <label class="form-check-label" for="payCard">Quẹt thẻ (CREDIT_CARD)</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-success btn-lg">THANH TOÁN</button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <script th:inline="javascript">
+        // Dùng Map để lưu giỏ hàng: (key: productId, value: {name, price, stock, quantity})
+        const cart = new Map();
+
+        // Lấy các element DOM
+        const cartTableBody = document.getElementById('cart-table-body');
+        const cartTotalEl = document.getElementById('cart-total');
+        const cartHiddenInputs = document.getElementById('cart-hidden-inputs');
+
+        // Hàm Format tiền
+        const formatter = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
+
+        function addToCart(id, name, price, stock) {
+            const numPrice = parseFloat(price);
+            const numStock = parseInt(stock);
+
+            if (cart.has(id)) {
+                // Tăng số lượng
+                const item = cart.get(id);
+                if (item.quantity < numStock) {
+                    item.quantity++;
+                } else {
+                    alert('Đã đạt số lượng tồn kho tối đa!');
+                }
+            } else {
+                // Thêm mới
+                if (numStock > 0) {
+                    cart.set(id, { name: name, price: numPrice, stock: numStock, quantity: 1 });
+                } else {
+                    alert('Sản phẩm đã hết hàng!');
+                }
+            }
+            renderCart();
+        }
+
+        function changeQuantity(id, newQuantity) {
+            if (!cart.has(id)) return;
+
+            const item = cart.get(id);
+            const numQuantity = parseInt(newQuantity);
+
+            if (numQuantity <= 0) {
+                // Xóa khỏi giỏ hàng
+                cart.delete(id);
+            } else if (numQuantity > item.stock) {
+                alert('Số lượng vượt quá tồn kho!');
+                // Phục hồi giá trị cũ
+                renderCart();
+            } else {
+                // Cập nhật số lượng
+                item.quantity = numQuantity;
+            }
+            renderCart();
+        }
+
+        function renderCart() {
+            // Xóa nội dung cũ
+            cartTableBody.innerHTML = '';
+            cartHiddenInputs.innerHTML = '';
+
+            let total = 0;
+            let itemIndex = 0;
+
+            if (cart.size === 0) {
+                cartTableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Giỏ hàng trống</td></tr>';
+            }
+
+            for (const [id, item] of cart.entries()) {
+                const subtotal = item.price * item.quantity;
+                total += subtotal;
+
+                // 1. Cập nhật bảng hiển thị
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.name}</td>
+                    <td>
+                        <input type="number" class="form-control form-control-sm"
+                               value="${item.quantity}"
+                               min="0"
+                               max="${item.stock}"
+                               onchange="changeQuantity('${id}', this.value)">
+                    </td>
+                    <td>${formatter.format(item.price)}</td>
+                    <td class="text-end">${formatter.format(subtotal)}</td>
+                `;
+                cartTableBody.appendChild(row);
+
+                // 2. Cập nhật các input ẩn cho form submit
+                const inputId = document.createElement('input');
+                inputId.type = 'hidden';
+                inputId.name = `items[${itemIndex}].productId`;
+                inputId.value = id;
+                cartHiddenInputs.appendChild(inputId);
+
+                const inputQty = document.createElement('input');
+                inputQty.type = 'hidden';
+                inputQty.name = `items[${itemIndex}].quantity`;
+                inputQty.value = item.quantity;
+                cartHiddenInputs.appendChild(inputQty);
+
+                itemIndex++;
+            }
+
+            // Cập nhật tổng tiền
+            cartTotalEl.innerText = formatter.format(total);
+        }
+    </script>
+
+</div>
+
+</html>

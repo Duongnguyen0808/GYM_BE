@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::content}, ${pageTitle})}">
+
+<div th:fragment="content">
+
+    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Hội viên: <span th:text="${memberProfile.fullName}"></span></h5>
+                    <p class="mb-1">
+                        <strong>SĐT (Barcode):</strong>
+                        <span th:text="${memberProfile.phoneNumber}"></span>
+                    </p>
+                    <p class="mb-1">
+                        <strong>Email:</strong>
+                        <span th:text="${memberProfile.email ?: 'N/A'}"></span>
+                    </p>
+                    <p class="mb-1">
+                        <strong>Ngày sinh:</strong>
+                        <span th:text="${memberProfile.birthDate != null ? #temporals.format(memberProfile.birthDate, 'dd/MM/yyyy') : 'N/A'}"></span>
+                    </p>
+                    <p class="mb-0">
+                        <strong>Địa chỉ:</strong>
+                        <span th:text="${memberProfile.address ?: 'N/A'}"></span>
+                    </p>
+                    <hr>
+                    <a th:href="@{/members/edit/{id}(id=${memberProfile.id})}" class="btn btn-sm btn-outline-primary">Chỉnh sửa thông tin</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">Danh sách gói tập</h4>
+                <div>
+                    <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#renewPackageModal">
+                    Gia hạn
+                    </button>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPackageModal">
+                        + Thêm gói tập mới
+                    </button>
+                </div>
+            </div>
+
+            <div th:if="${memberSubscriptions.isEmpty()}" class="alert alert-secondary">Hội viên này chưa đăng ký gói tập nào.</div>
+
+            <div class="list-group shadow-sm">
+                <div th:each="sub : ${memberSubscriptions}" class="list-group-item list-group-item-action flex-column align-items-start p-3">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1" th:text="${sub.packageName}"></h5>
+                        <span th:text="${sub.status}"
+                              th:classappend="${sub.status.name() == 'ACTIVE'} ? 'badge bg-success' :
+                                               (${sub.status.name() == 'FROZEN'} ? 'badge bg-info text-dark' :
+                                               (${sub.status.name() == 'PENDING'} ? 'badge bg-warning text-dark' : 'badge bg-danger'))"
+                              class="badge rounded-pill align-self-start"></span>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6" th:if="${sub.startDate != null}">
+                            <p class="mb-1">Từ: <strong th:text="${#temporals.format(sub.startDate.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'dd/MM/yyyy')}"></strong></p>
+                            <p class="mb-1">Đến: <strong th:text="${#temporals.format(sub.endDate.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'dd/MM/yyyy')}"></strong></p>
+                            <p class="mb-1" th:if="${#strings.contains(sub.packageName, 'Per-Visit')}">
+                                Số lượt còn lại: <strong th:text="${sub.remainingSessions}"></strong>
+                            </p>
+                        </div>
+                        <div class="col-md-6" th:if="${#strings.contains(sub.packageName, 'PT')}">
+                            <p class="mb-1">Số buổi còn lại: <strong th:text="${sub.remainingSessions}"></strong></p>
+                            <p class="mb-1">PT Phụ trách: <strong th:text="${sub.ptFullName ?: 'Chưa gán'}"></strong></p>
+                        </div>
+                    </div>
+
+                    <div class="mt-2">
+                        <button th:if="${#strings.contains(sub.packageName, 'PT') and sub.status.name() == 'ACTIVE'}"
+                                type="button" class="btn btn-sm btn-primary"
+                                data-bs-toggle="modal" data-bs-target="#logPtModal"
+                                th:attr="data-bs-subid=${sub.subscriptionId}, data-bs-subname=${sub.packageName}">
+                            Ghi buổi tập
+                        </button>
+
+                        <button th:if="${sub.status.name() == 'ACTIVE'}"
+                                type="button" class="btn btn-sm btn-outline-secondary"
+                                data-bs-toggle="modal" data-bs-target="#freezeModal"
+                                th:attr="data-bs-subid=${sub.subscriptionId}, data-bs-subname=${sub.packageName}">
+                            Đóng băng
+                        </button>
+
+                        <form th:if="${sub.status.name() == 'FROZEN'}" th:action="@{/members/subscription/unfreeze/{subId}(subId=${sub.subscriptionId})}" method="post" class="d-inline">
+                            <input type="hidden" name="memberId" th:value="${memberProfile.id}">
+                            <button type="submit" class="btn btn-sm btn-outline-success">Mở băng</button>
+                        </form>
+
+                        <form th:if="${sub.status.name() == 'ACTIVE'}" th:action="@{/members/subscription/cancel/{subId}(subId=${sub.subscriptionId})}" method="post" class="d-inline">
+                            <input type="hidden" name="memberId" th:value="${memberProfile.id}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Bạn có chắc muốn hủy gói tập này?');">Hủy</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addPackageModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form th:action="@{/members/subscription/create}" th:object="${subRequest}" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Thêm gói tập mới</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" th:field="*{memberId}" th:value="${memberProfile.id}">
+
+                        <div th:if="${#fields.hasErrors('subRequest.*')}" class="alert alert-danger">
+                            <p th:each="err : ${#fields.errors('subRequest.*')}" th:text="${err}"></p>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="addPackageId" class="form-label">Chọn Gói tập</label>
+                            <select th:field="*{packageId}" id="addPackageId" class="form-select" onchange="togglePtSelect('add', this.value)" required>
+                                <option value="">-- Chọn gói --</option>
+                                <option th:each="pkg : ${allPackages}"
+                                        th:value="${pkg.id}"
+                                        th:text="${pkg.name} + ' (' + ${#numbers.formatDecimal(pkg.price, 0, 'COMMA', 0, 'POINT')} + ' VNĐ)'"
+                                        th:data-type="${pkg.packageType.name()}">
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3" id="addPtSelectWrapper" style="display: none;">
+                            <label for="addAssignedPtId" class="form-label">Gán cho PT (Tùy chọn)</label>
+                            <select th:field="*{assignedPtId}" id="addAssignedPtId" class="form-select">
+                                <option value="">-- Không gán --</option>
+                                <option th:each="pt : ${allPts}"
+                                        th:value="${pt.id}"
+                                        th:text="${pt.fullName}"></option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Hình thức thanh toán</label>
+                            <select th:field="*{paymentMethod}" class="form-select" required>
+                                <option value="CASH">Tiền mặt (CASH)</option>
+                                <option value="CREDIT_CARD">Quẹt thẻ (CREDIT_CARD)</option>
+                                <option value="BANK_TRANSFER">Chuyển khoản (BANK_TRANSFER)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-primary">Thêm gói tập</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="renewPackageModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form th:action="@{/members/subscription/renew}" th:object="${subRequest}" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Gia hạn gói tập</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" th:field="*{memberId}" th:value="${memberProfile.id}">
+
+                        <div class="mb-3">
+                            <label for="renewPackageId" class="form-label">Chọn Gói tập để gia hạn</label>
+                            <select th:field="*{packageId}" id="renewPackageId" class="form-select" onchange="togglePtSelect('renew', this.value)" required>
+                                <option value="">-- Chọn gói --</option>
+                                <option th:each="pkg : ${allPackages}"
+                                        th:value="${pkg.id}"
+                                        th:text="${pkg.name} + ' (' + ${#numbers.formatDecimal(pkg.price, 0, 'COMMA', 0, 'POINT')} + ' VNĐ)'"
+                                        th:data-type="${pkg.packageType.name()}">
+                                </option>
+                            </select>
+                        </div>
+                        <div class="mb-3" id="renewPtSelectWrapper" style="display: none;">
+                            <label for="renewAssignedPtId" class="form-label">Gán cho PT (Tùy chọn)</label>
+                            <select th:field="*{assignedPtId}" id="renewAssignedPtId" class="form-select">
+                                <option value="">-- Không gán --</option>
+                                <option th:each="pt : ${allPts}"
+                                        th:value="${pt.id}"
+                                        th:text="${pt.fullName}"></option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Hình thức thanh toán</label>
+                            <select th:field="*{paymentMethod}" class="form-select" required>
+                                <option value="CASH">Tiền mặt (CASH)</option>
+                                <option value="CREDIT_CARD">Quẹt thẻ (CREDIT_CARD)</option>
+                                <option value="BANK_TRANSFER">Chuyển khoản (BANK_TRANSFER)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-success">Gia hạn</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="freezeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="freezeForm" th:object="${freezeRequest}" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Đóng băng gói tập</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="memberId" th:value="${memberProfile.id}">
+                        <p>Bạn muốn đóng băng gói: <strong id="freezePackageName"></strong></p>
+
+                        <div class="mb-3">
+                            <label for="freezeDays" class="form-label">Số ngày đóng băng</label>
+                            <input type="number" th:field="*{freezeDays}" id="freezeDays" class="form-control" required min="1">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-warning">Xác nhận Đóng băng</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="logPtModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="logPtForm" th:object="${logPtRequest}" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Ghi nhận buổi tập PT</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="memberId" th:value="${memberProfile.id}">
+                        <p>Xác nhận ghi 1 buổi tập cho gói: <strong id="logPtPackageName"></strong></p>
+
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Ghi chú buổi tập (Tùy chọn)</label>
+                            <textarea th:field="*{notes}" id="notes" rows="3" class="form-control"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-primary">Xác nhận (Trừ 1 buổi)</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        /* Lấy URL gốc (để tạo action cho form) */
+        const baseUrl = /*[[@{/members/subscription}]]*/ '/members/subscription';
+
+        // 1. Script ẩn/hiện chọn PT
+        function togglePtSelect(prefix, selectedPackageId) {
+            const selectEl = document.getElementById(prefix + 'PackageId');
+            const ptWrapper = document.getElementById(prefix + 'PtSelectWrapper');
+
+            if (!selectEl || !ptWrapper) return;
+
+            const selectedOption = selectEl.querySelector('option[value="' + selectedPackageId + '"]');
+            if (selectedOption) {
+                const type = selectedOption.dataset.type;
+                if (type === 'PT_SESSION') {
+                    ptWrapper.style.display = 'block';
+                } else {
+                    ptWrapper.style.display = 'none';
+                }
+            }
+        }
+
+        // 2. Script set Action cho Form Đóng băng
+        const freezeModal = document.getElementById('freezeModal');
+        if (freezeModal) {
+            freezeModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget; // Nút đã bấm
+                const subId = button.getAttribute('data-bs-subid');
+                const subName = button.getAttribute('data-bs-subname');
+
+                const modalTitle = freezeModal.querySelector('#freezePackageName');
+                const modalForm = freezeModal.querySelector('#freezeForm');
+
+                modalTitle.textContent = subName;
+                modalForm.action = baseUrl + '/freeze/' + subId;
+            });
+        }
+
+        // 3. Script set Action cho Form Log PT
+        const logPtModal = document.getElementById('logPtModal');
+        if (logPtModal) {
+            logPtModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const subId = button.getAttribute('data-bs-subid');
+                const subName = button.getAttribute('data-bs-subname');
+
+                const modalTitle = logPtModal.querySelector('#logPtPackageName');
+                const modalForm = logPtModal.querySelector('#logPtForm');
+
+                modalTitle.textContent = subName;
+                modalForm.action = baseUrl + '/log-pt/' + subId;
+            });
+        }
+
+    </script>
+</div>
+
+</html>

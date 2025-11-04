@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::content}, 'Quản lý Hội viên')}">
+
+<div th:fragment="content">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Quản lý Hội viên</h2>
+        <a th:href="@{/members/create}" class="btn btn-primary">Tạo Hội viên mới</a>
+    </div>
+
+    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                <tr>
+                    <th scope="col">ID Hội viên</th>
+                    <th scope="col">Họ và Tên</th>
+                    <th scope="col">Số điện thoại (Barcode)</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Ngày tham gia</th>
+                    <th scope="col" class="text-end">Hành động</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="member : ${members}">
+                    <th scope="row" th:text="${member.id}">101</th>
+                    <td th:text="${member.fullName}">Nguyễn Văn B</td>
+                    <td th:text="${member.phoneNumber}">0912345678</td>
+                    <td th:text="${member.email}">member@example.com</td>
+                    <td th:text="${#temporals.format(member.createdAt, 'dd/MM/yyyy')}">30/10/2025</td>
+
+                    <td class="text-end">
+                        <a th:href="@{/members/detail/{id}(id=${member.id})}" class="btn btn-sm btn-info text-white">Xem chi tiết</a>
+                        <a th:href="@{/members/edit/{id}(id=${member.id})}" class="btn btn-sm btn-outline-primary ms-1">Sửa</a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+</html>

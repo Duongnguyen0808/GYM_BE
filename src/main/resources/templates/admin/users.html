@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::content}, 'Quản lý Nhân viên')}">
+
+<div th:fragment="content">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Quản lý Nhân viên & PT</h2>
+        <a th:href="@{/admin/users/create}" class="btn btn-primary">Thêm Nhân viên mới</a>
+    </div>
+
+    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">Họ và Tên</th>
+                    <th scope="col">Số điện thoại</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Vai trò (Role)</th>
+                    <th scope="col">Trạng thái</th>
+                    <th scope="col" class="text-end">Hành động</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="user : ${users}">
+                    <th scope="row" th:text="${user.id}">1</th>
+                    <td th:text="${user.fullName}">Nguyễn Văn A</td>
+                    <td th:text="${user.phoneNumber}">0987654321</td>
+                    <td th:text="${user.email}">email@example.com</td>
+
+                    <td>
+                            <span th:text="${user.role}"
+                                  th:classappend="${user.role.name() == 'ADMIN'} ? 'badge bg-danger' :
+                                                   (${user.role.name() == 'PT'} ? 'badge bg-info text-dark' :
+                                                   (${user.role.name() == 'MEMBER'} ? 'badge bg-light text-dark border' : 'badge bg-secondary'))">
+                            </span>
+                    </td>
+
+                    <td>
+                        <span th:if="${user.enabled and !user.locked}" class="badge bg-success">Đang hoạt động</span>
+                        <span th:if="${!user.enabled}" class="badge bg-warning text-dark">Chưa kích hoạt</span>
+                        <span th:if="${user.locked}" class="badge bg-danger">Đã bị khóa</span>
+                    </td>
+
+                    <td class="text-end">
+                        <a th:if="${user.role.name() != 'MEMBER'}"
+                           th:href="@{/admin/users/edit/{id}(id=${user.id})}"
+                           class="btn btn-sm btn-outline-primary">
+                            Sửa
+                        </a>
+
+                        <form th:if="${user.role.name() != 'MEMBER'}"
+                              th:action="@{/admin/users/toggle-lock/{id}(id=${user.id})}"
+                              method="post"
+                              class="d-inline ms-1">
+
+                            <button th:if="${!user.locked}"
+                                    type="submit" class="btn btn-sm btn-outline-danger"
+                                    onclick="return confirm('Bạn có chắc muốn KHÓA tài khoản này?');">
+                                Khóa
+                            </button>
+
+                            <button th:if="${user.locked}"
+                                    type="submit" class="btn btn-sm btn-outline-success"
+                                    onclick="return confirm('Bạn có chắc muốn MỞ KHÓA tài khoản này?');">
+                                Mở khóa
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+</html>

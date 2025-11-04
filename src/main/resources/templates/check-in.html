@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::content}, 'Check-in Hội viên')}">
+
+<div th:fragment="content">
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-6">
+
+            <h2 class="mb-4 text-center">Check-in Hội viên</h2>
+
+            <div th:if="${checkInSuccess != null and checkInSuccess}" class="card shadow-sm border-success mb-4">
+                <div class="card-body p-4 text-center">
+                    <h1 class="display-3 text-success">✔️</h1>
+                    <h3 class="card-title text-success" th:text="${checkInResponse.message}">Check-in thành công!</h3>
+                    <hr>
+                    <div class="text-start">
+                        <p class="mb-1"><strong>Hội viên:</strong> <span th:text="${checkInResponse.memberFullName}"></span></p>
+                        <p class="mb-1"><strong>Gói tập:</strong> <span th:text="${checkInResponse.packageName}"></span></p>
+                        <p class="mb-1" th:if="${checkInResponse.packageEndDate != null}">
+                            <strong>Hạn dùng:</strong>
+                            <span th:text="${#temporals.format(checkInResponse.packageEndDate.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'dd/MM/yyyy HH:mm')}"></span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div th:if="${checkInError != null and checkInError}" class="card shadow-sm border-danger mb-4">
+                <div class="card-body p-4 text-center">
+                    <h1 class="display-3 text-danger">❌</h1>
+                    <h3 class="card-title text-danger" th:text="${checkInResponse.message}">Không tìm thấy hội viên!</h3>
+                    <hr>
+                    <p class="mb-1" th:if="${checkInResponse.memberFullName != null}">
+                        <strong>Hội viên:</strong> <span th:text="${checkInResponse.memberFullName}"></span>
+                    </p>
+                    <p class="mb-1" th:if="${checkInResponse.packageName != null}">
+                        <strong>Gói tập (Nếu có):</strong> <span th:text="${checkInResponse.packageName}"></span>
+                    </p>
+                </div>
+            </div>
+
+
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <form th:action="@{/check-in}" th:object="${checkInRequest}" method="post">
+
+                        <div class="mb-3">
+                            <label for="barcode" class="form-label fs-5">Quét mã QR hoặc Nhập Số điện thoại</label>
+                            <input type="text" th:field="*{barcode}" id="barcode" class="form-control form-control-lg"
+                                   th:classappend="${#fields.hasErrors('barcode')} ? 'is-invalid' : ''"
+                                   autofocus
+                                   autocomplete="off">
+                            <div th:if="${#fields.hasErrors('barcode')}" th:errors="*{barcode}" class="invalid-feedback"></div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">Check-in</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('barcode').focus();
+
+            /* SỬA LỖI 2 (Lỗi trong log):
+              Đổi "checkInSuccess or checkInError"
+              thành "checkInSuccess != null or checkInError != null"
+            */
+            /*[# th:if="${checkInSuccess != null or checkInError != null}"]*/
+            setTimeout(function() {
+                // Tải lại trang để xóa thông báo và sẵn sàng cho lần quét tiếp theo
+                window.location.href = /*[[@{/check-in}]]*/ '/check-in';
+            }, 5000); // 5 giây
+            /*[/]*/
+        });
+    </script>
+</div>
+
+</html>

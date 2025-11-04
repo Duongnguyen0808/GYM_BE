@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::content}, 'Quản lý Lịch làm việc')}">
+
+<div th:fragment="content">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Quản lý Lịch làm việc</h2>
+        <a th:href="@{/admin/schedules/create}" class="btn btn-primary">Xếp lịch mới</a>
+    </div>
+
+    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">Nhân viên</th>
+                    <th scope="col">Ngày</th>
+                    <th scope="col">Giờ bắt đầu</th>
+                    <th scope="col">Giờ kết thúc</th>
+                    <th scope="col">Ghi chú</th>
+                    <th scope="col" class="text-end">Hành động</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="sch : ${schedules}">
+                    <th scope="row" th:text="${sch.id}">1</th>
+                    <td th:text="${sch.userFullName}">Nguyễn Văn A</td>
+
+                    <td th:text="${#temporals.format(sch.startTime.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'dd/MM/yyyy')}">30/10/2025</td>
+                    <td th:text="${#temporals.format(sch.startTime.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'HH:mm')}">08:00</td>
+                    <td th:text="${#temporals.format(sch.endTime.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'HH:mm')}">17:00</td>
+
+                    <td th:text="${sch.notes}">Ca sáng</td>
+
+                    <td class="text-end">
+                        <form th:action="@{/admin/schedules/delete/{id}(id=${sch.id})}" method="post" class="d-inline">
+                            <button class="btn btn-sm btn-outline-danger"
+                            onclick="return confirm('Bạn có chắc muốn xóa lịch này?');">Xóa</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+        </div>
+    </div>
+</div>
+
+</html>

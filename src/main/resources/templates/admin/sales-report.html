@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::content}, 'Báo cáo Doanh thu')}">
+
+<div th:fragment="content">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Báo cáo Doanh thu</h2>
+        <button class="btn btn-outline-primary">Lọc theo ngày</button>
+    </div>
+
+    <div class="alert alert-success fs-4">
+        <strong>Tổng doanh thu (Hoàn thành):</strong>
+        <span th:text="${#numbers.formatDecimal(totalRevenue, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                <tr>
+                    <th scope="col">ID Giao dịch</th>
+                    <th scope="col">Thời gian</th>
+                    <th scope="col">Loại Giao dịch</th>
+                    <th scope="col">Mô tả</th>
+                    <th scope="col">Nhân viên</th>
+                    <th scope="col">Hình thức</th>
+                    <th scope="col">Trạng thái</th>
+                    <th scope="col" class="text-end">Số tiền (VNĐ)</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="tx : ${reportData}">
+                    <th scope="row" th:text="${tx.id}">1001</th>
+                    <td th:text="${#temporals.format(tx.transactionDate.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'dd/MM/yyyy HH:mm')}"></td>
+                    <td th:text="${tx.transactionType}">Gói tập</td>
+                    <td th:text="${tx.description}">Gói 1 tháng</td>
+                    <td th:text="${tx.createdByStaffName}">Nhân viên A</td>
+                    <td th:text="${tx.paymentMethod}">CASH</td>
+
+                    <td>
+                            <span th:text="${tx.status}"
+                                  th:classappend="${tx.status.name() == 'COMPLETED'} ? 'badge bg-success' :
+                                                   (${tx.status.name() == 'PENDING'} ? 'badge bg-warning text-dark' : 'badge bg-danger')">
+                            </span>
+                    </td>
+
+                    <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(tx.amount, 0, 'COMMA', 0, 'POINT')}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+</html>
