@@ -23,6 +23,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class CheckInWebController {
 
     private final CheckInService checkInService;
+    private final com.gym.service.gymmanagementservice.services.MemberService memberService;
 
     @GetMapping
     public String getCheckInPage(Model model) {
@@ -30,9 +31,22 @@ public class CheckInWebController {
             model.addAttribute("checkInRequest", new CheckInRequestDTO());
         }
 
+        model.addAttribute("members", memberService.getAllMembers());
+
         model.addAttribute("pageTitle", "Check-in Hội viên");
         model.addAttribute("contentView", "check-in");
-        model.addAttribute("activePage", "checkIn"); // <-- BÁO ACTIVE
+        model.addAttribute("activePage", "checkIn");
+        return "fragments/layout";
+    }
+
+    @GetMapping("/logs")
+    public String getCheckInLogs(Model model) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 200, org.springframework.data.domain.Sort.by("checkInTime").descending());
+        java.util.List<com.gym.service.gymmanagementservice.models.CheckInLog> logs = checkInService.getRecentLogs(pageable);
+        model.addAttribute("logs", logs);
+        model.addAttribute("pageTitle", "Nhật ký Check-in");
+        model.addAttribute("contentView", "check-in-logs");
+        model.addAttribute("activePage", "checkIn");
         return "fragments/layout";
     }
 

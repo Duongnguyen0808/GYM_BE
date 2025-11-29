@@ -31,6 +31,10 @@ public class Transaction {
     @Column(nullable = false)
     private TransactionStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "kind", nullable = false)
+    private TransactionKind kind;
+
     @Column(nullable = false)
     private OffsetDateTime transactionDate;
 
@@ -40,8 +44,8 @@ public class Transaction {
     private User createdBy;
 
     // Liên kết tới việc đăng ký gói tập (có thể null)
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_package_id", unique = true)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_package_id")
     private MemberPackage memberPackage;
 
     // Liên kết tới hóa đơn bán hàng (có thể null)

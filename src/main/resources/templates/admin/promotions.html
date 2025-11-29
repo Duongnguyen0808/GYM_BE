@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<div th:fragment="content">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0" th:text="${pageTitle}">Ưu đãi/Khuyến mại</h2>
+        <a th:href="@{/admin/promotions/create}" class="btn btn-primary">Tạo ưu đãi</a>
+    </div>
+
+    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                <tr>
+                    <th scope="col">Tên</th>
+                    <th scope="col">Áp dụng cho</th>
+                    <th scope="col">Giảm (%)</th>
+                    <th scope="col">Từ</th>
+                    <th scope="col">Đến</th>
+                    <th scope="col">Trạng thái</th>
+                    <th scope="col" class="text-end">Hành động</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="p : ${promotions}">
+                    <td th:text="${p.name}">Khuyến mại</td>
+                    <td>
+                        <span th:text="${p.targetType.name() == 'PACKAGE' ? 'Gói tập: ' : 'Sản phẩm: '}"></span>
+                        <strong th:text="${targetNames != null and targetNames.containsKey(p.id) ? targetNames.get(p.id) : 'Không tìm thấy'}"></strong>
+                    </td>
+                    <td th:text="${#numbers.formatDecimal(p.discountPercent, 0, 'COMMA', 0, 'POINT')}">10</td>
+                    <td th:text="${#temporals.format(p.startAt.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'dd/MM/yyyy HH:mm')}"></td>
+                    <td th:text="${#temporals.format(p.endAt.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'dd/MM/yyyy HH:mm')}"></td>
+                    <td>
+                        <span th:classappend="${p.isActive} ? 'badge bg-success' : 'badge bg-danger'"
+                              th:text="${p.isActive} ? 'Đang áp dụng' : 'Ngừng'">Đang áp dụng</span>
+                    </td>
+                    <td class="text-end">
+                        <a th:href="@{/admin/promotions/edit/{id}(id=${p.id})}" class="btn btn-sm btn-outline-primary">Sửa</a>
+                        <form th:action="@{/admin/promotions/delete/{id}(id=${p.id})}" method="post" class="d-inline ms-1">
+                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Xóa ưu đãi này?')">Xóa</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+</html>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <title>Đăng nhập hệ thống</title>
@@ -19,6 +19,7 @@
                         Bạn đã đăng xuất thành công.
                     </div>
                     <form th:action="@{/login}" method="post">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
 
                         <div class="mb-3">
                             <label for="username" class="form-label">Số điện thoại</label>
@@ -27,6 +28,10 @@
                         <div class="mb-3">
                             <label for="password" class="form-label">Mật khẩu</label>
                             <input type="password" id="password" name="password" class="form-control" required>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="rememberMe" name="remember-me" checked>
+                            <label class="form-check-label" for="rememberMe">Ghi nhớ đăng nhập trên máy này</label>
                         </div>
                         <div class="d-grid">
                             <button type="submit" class="btn btn-primary">Đăng nhập</button>

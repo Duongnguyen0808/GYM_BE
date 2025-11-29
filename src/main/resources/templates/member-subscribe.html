@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+  <div th:fragment="content">
+    <div
+      th:if="${successMessage}"
+      class="alert alert-success"
+      th:text="${successMessage}"
+    ></div>
+    <div
+      th:if="${errorMessage}"
+      class="alert alert-danger"
+      th:text="${errorMessage}"
+    ></div>
+
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h4 class="mb-3">
+          Đăng ký gói cho: <span th:text="${memberProfile.fullName}"></span>
+        </h4>
+
+        <form
+          th:action="@{/members/{id}/subscribe(id=${memberProfile.id})}"
+          th:object="${subRequest}"
+          method="post"
+        >
+          <input
+            type="hidden"
+            th:name="${_csrf.parameterName}"
+            th:value="${_csrf.token}"
+          />
+
+          <div class="mb-3">
+            <label class="form-label">Chọn Gói tập</label>
+            <select class="form-select" th:field="*{packageId}" id="packageSelect" required>
+              <option value="">-- Chọn gói --</option>
+              <option
+                th:each="pkg : ${allPackages}"
+                th:value="${pkg.id}"
+                th:attr="data-package-type=${pkg.packageType.name()}, data-assigned-pt-id=${pkg.assignedPtId}, data-assigned-pt-name=${pkg.assignedPtName}, data-duration-months=${pkg.durationMonths}, data-duration-days=${pkg.durationDays}, data-allowed-weekdays=${pkg.allowedWeekdays != null ? pkg.allowedWeekdays : ''}"
+                th:text="${pkg.name + ' - ' + #numbers.formatDecimal(pkg.price, 0, 'COMMA', 0, 'POINT') + ' VNĐ' + (pkg.assignedPtName != null ? ' (PT: ' + pkg.assignedPtName + ')' : '')}"
+              ></option>
+            </select>
+          </div>
+
+          <div
+            class="alert alert-info"
+            id="pricePreview"
+            style="display: none"
+          ></div>
+          <div
+            class="alert alert-warning"
+            id="durationPreview"
+            style="display: none"
+          ></div>
+          <div
+            class="text-end mt-2"
+            id="totalPreview"
+            style="display: none; font-size: 1.1rem"
+          >
+            <strong>TỔNG SỐ TIỀN: <span id="totalAmount">0 VNĐ</span></strong>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Hình thức thanh toán</label>
+            <select class="form-select" th:field="*{paymentMethod}" required>
+              <option value="CASH">💵 Tiền mặt</option>
+              <option value="VN_PAY">💳 VNPay (Online)</option>
+            </select>
+          </div>
+
+          <!-- Hiển thị thông tin PT nếu gói đã có PT -->
+          <div class="mb-3" id="ptInfoSection" style="display: none">
+            <div class="alert alert-info mb-0">
+              <strong>👤 PT được gán:</strong> <span id="ptNameDisplay"></span>
+            </div>
+          </div>
+
+          <!-- Chọn khung giờ cho gói PT -->
+          <div class="mb-3" id="timeSlotSection" style="display: none">
+            <label class="form-label">Chọn khung giờ <span class="text-danger">*</span></label>
+            <select class="form-select" th:field="*{timeSlot}" id="timeSlotSelect" required>
+              <option value="">-- Chọn khung giờ --</option>
+              <option value="MORNING">Sáng (9h - 11h)</option>
+              <option value="AFTERNOON_1">Chiều 1 (13h - 15h)</option>
+              <option value="AFTERNOON_2">Chiều 2 (16h - 18h)</option>
+              <option value="EVENING">Tối (19h - 21h)</option>
+            </select>
+            <small class="form-text text-muted" id="timeSlotHelp"></small>
+          </div>
+
+          <!-- Hiển thị các thứ trong tuần cho phép tập -->
+          <div class="mb-3" id="allowedWeekdaysSection" style="display: none">
+            <label class="form-label">Các thứ trong tuần có thể tập</label>
+            <div class="alert alert-info mb-0" id="allowedWeekdaysDisplay">
+              <strong>📅 Các thứ có thể tập:</strong> <span id="weekdaysText">Đang tải...</span>
+            </div>
+            <small class="form-text text-muted">
+              Gói tập này cho phép tập vào các thứ đã chọn. Bạn có thể chọn lại các thứ khi đăng ký.
+            </small>
+          </div>
+
+          <div class="d-flex justify-content-between">
+            <a
+              th:href="@{/members/detail/{id}(id=${memberProfile.id})}"
+              class="btn btn-secondary"
+              >Quay lại</a
+            >
+            <button type="submit" class="btn btn-primary">Đăng ký gói</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script th:inline="javascript">
+      const pkgSelect = document.getElementById('packageSelect');
+      const preview = document.getElementById('pricePreview');
+      const durationPreview = document.getElementById('durationPreview');
+      const totalPreview = document.getElementById('totalPreview');
+      const ptInfoSection = document.getElementById('ptInfoSection');
+      const timeSlotSection = document.getElementById('timeSlotSection');
+      const timeSlotSelect = document.getElementById('timeSlotSelect');
+      const timeSlotHelp = document.getElementById('timeSlotHelp');
+      const ptNameDisplay = document.getElementById('ptNameDisplay');
+      const allowedWeekdaysSection = document.getElementById('allowedWeekdaysSection');
+      const weekdaysText = document.getElementById('weekdaysText');
+      
+      // Hàm chuyển đổi tên thứ từ tiếng Anh sang tiếng Việt
+      function getWeekdayName(day) {
+        const weekdayMap = {
+          'MON': 'Thứ 2',
+          'TUE': 'Thứ 3',
+          'WED': 'Thứ 4',
+          'THU': 'Thứ 5',
+          'FRI': 'Thứ 6',
+          'SAT': 'Thứ 7',
+          'SUN': 'Chủ nhật'
+        };
+        return weekdayMap[day] || day;
+      }
+      
+      // Hàm hiển thị các thứ trong tuần
+      function displayAllowedWeekdays(allowedWeekdays) {
+        if (!allowedWeekdays || allowedWeekdays.trim() === '') {
+          allowedWeekdaysSection.style.display = 'none';
+          return;
+        }
+        
+        const weekdays = allowedWeekdays.split(',').map(w => w.trim());
+        const weekdayNames = weekdays.map(getWeekdayName);
+        weekdaysText.textContent = weekdayNames.join(', ');
+        allowedWeekdaysSection.style.display = 'block';
+      }
+      
+      function fmt(n){ return new Intl.NumberFormat('vi-VN').format(Number(n)) + ' VNĐ'; }
+      
+      function formatDate(date) {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+      }
+      
+      function calculateDurationRange(durationMonths, durationDays) {
+        // Lấy ngày hiện tại (ngày đăng ký) - dùng ngày hôm nay
+        const startDate = new Date();
+        // Reset giờ về 00:00:00 để tránh vấn đề timezone
+        startDate.setHours(0, 0, 0, 0);
+        let endDate;
+        
+        if (durationMonths && durationMonths > 0) {
+          // Tính ngày kết thúc bằng cách cộng số tháng
+          endDate = new Date(startDate);
+          endDate.setMonth(endDate.getMonth() + durationMonths);
+          // Đảm bảo ngày kết thúc cũng là 00:00:00
+          endDate.setHours(0, 0, 0, 0);
+        } else if (durationDays && durationDays > 0) {
+          // Tính ngày kết thúc bằng cách cộng số ngày
+          endDate = new Date(startDate);
+          endDate.setDate(endDate.getDate() + durationDays);
+          endDate.setHours(0, 0, 0, 0);
+        } else {
+          return null;
+        }
+        
+        return {
+          start: formatDate(startDate),
+          end: formatDate(endDate)
+        };
+      }
+      
+      async function loadAvailableTimeSlots(packageId) {
+        try {
+          const res = await fetch(`/members/packages/${packageId}/available-time-slots`);
+          const data = await res.json();
+          
+          // Kiểm tra nếu có lỗi
+          if (!res.ok || data.error) {
+            throw new Error(data.error || 'Không thể tải khung giờ');
+          }
+          
+          // Đảm bảo data là array
+          if (!Array.isArray(data)) {
+            throw new Error('Dữ liệu không hợp lệ');
+          }
+          
+          const slots = data;
+          
+          // Xóa các option cũ (trừ option đầu tiên)
+          while (timeSlotSelect.options.length > 1) {
+            timeSlotSelect.remove(1);
+          }
+          
+          // Thêm các time slot với trạng thái available/taken
+          slots.forEach(slot => {
+            const option = document.createElement('option');
+            option.value = slot.timeSlot;
+            const statusText = slot.available ? '✅ Còn trống' : '❌ Đã đặt';
+            option.textContent = `${slot.displayName} (${slot.startTime} - ${slot.endTime}) - ${statusText}`;
+            option.disabled = !slot.available;
+            if (!slot.available) {
+              option.style.color = '#999';
+            }
+            timeSlotSelect.appendChild(option);
+          });
+          
+          // Cập nhật help text
+          const availableCount = slots.filter(s => s.available).length;
+          if (availableCount === 0) {
+            timeSlotHelp.textContent = '⚠️ Tất cả khung giờ đã được đặt. Vui lòng chọn gói khác.';
+            timeSlotHelp.className = 'form-text text-danger';
+          } else {
+            timeSlotHelp.textContent = `Có ${availableCount} khung giờ còn trống.`;
+            timeSlotHelp.className = 'form-text text-muted';
+          }
+        } catch (e) {
+          console.error('Error loading time slots:', e);
+          timeSlotHelp.textContent = 'Không thể tải thông tin khung giờ: ' + e.message;
+          timeSlotHelp.className = 'form-text text-danger';
+        }
+      }
+      
+      async function refreshPreview(){
+        const pkgId = pkgSelect.value;
+        if(!pkgId){
+          preview.style.display='none';
+          durationPreview.style.display='none';
+          totalPreview.style.display='none';
+          ptInfoSection.style.display='none';
+          timeSlotSection.style.display='none';
+          return;
+        }
+
+        // Lấy thông tin từ option được chọn
+        const selectedOption = pkgSelect.options[pkgSelect.selectedIndex];
+        const packageType = selectedOption.getAttribute('data-package-type');
+        const assignedPtId = selectedOption.getAttribute('data-assigned-pt-id');
+        const assignedPtName = selectedOption.getAttribute('data-assigned-pt-name');
+        const durationMonths = selectedOption.getAttribute('data-duration-months');
+        const durationDays = selectedOption.getAttribute('data-duration-days');
+        const allowedWeekdays = selectedOption.getAttribute('data-allowed-weekdays') || '';
+
+        // Xử lý hiển thị khung thời gian cho gói GYM_ACCESS
+        // Luôn tính lại từ ngày hiện tại khi chọn gói
+        if (packageType === 'GYM_ACCESS') {
+          const months = durationMonths && durationMonths !== 'null' ? parseInt(durationMonths) : null;
+          const days = durationDays && durationDays !== 'null' ? parseInt(durationDays) : null;
+          const range = calculateDurationRange(months, days);
+          
+          if (range) {
+            durationPreview.style.display = 'block';
+            durationPreview.innerHTML = `<strong>📅 Thời hạn gói:</strong> Từ ngày <strong>${range.start}</strong> đến ngày <strong>${range.end}</strong>`;
+          } else {
+            durationPreview.style.display = 'none';
+          }
+        } else {
+          durationPreview.style.display = 'none';
+        }
+
+        // Xử lý hiển thị PT và time slot
+        if(packageType === 'PT_SESSION') {
+          if(assignedPtId && assignedPtName) {
+            // Gói đã có PT -> hiển thị tên PT và chọn khung giờ
+            ptInfoSection.style.display='block';
+            ptNameDisplay.textContent = assignedPtName;
+            timeSlotSection.style.display='block';
+            timeSlotSelect.required = true;
+            
+            // Hiển thị các thứ trong tuần cho phép tập
+            const allowedWeekdays = selectedOption.dataset.allowedWeekdays || '';
+            displayAllowedWeekdays(allowedWeekdays);
+            
+            // Load available time slots
+            await loadAvailableTimeSlots(pkgId);
+          } else {
+            // Gói chưa có PT -> ẩn tất cả
+            ptInfoSection.style.display='none';
+            timeSlotSection.style.display='none';
+            timeSlotSelect.required = false;
+            allowedWeekdaysSection.style.display='none';
+          }
+        } else {
+          ptInfoSection.style.display='none';
+          timeSlotSection.style.display='none';
+          timeSlotSelect.required = false;
+          allowedWeekdaysSection.style.display='none';
+        }
+
+        try{
+          const memberId = /*[[${memberProfile.id}]]*/ null;
+          if (!memberId) {
+            throw new Error('Không tìm thấy ID hội viên');
+          }
+          const res = await fetch(`/members/${memberId}/subscribe/preview?packageId=${pkgId}`);
+          
+          if (!res.ok) {
+            const errorData = await res.json().catch(() => ({ error: 'Lỗi kết nối đến server' }));
+            throw new Error(errorData.error || `Lỗi HTTP: ${res.status}`);
+          }
+          
+          const data = await res.json();
+          
+          if(data.error){
+            preview.style.display='block';
+            preview.className='alert alert-warning';
+            preview.textContent = 'Lỗi: ' + data.error;
+            totalPreview.style.display='none';
+            return;
+          }
+          
+          // Hiển thị thông tin giá
+          preview.style.display='block';
+          preview.className='alert alert-info';
+          
+          const promoText = data.promoPercent && parseFloat(data.promoPercent) > 0 
+            ? ` — Khuyến mãi: <strong>${data.promoPercent}%</strong>` 
+            : '';
+          
+          preview.innerHTML = `Giá gốc: <strong>${fmt(data.basePrice)}</strong>${promoText} — Giá cuối: <strong>${fmt(data.finalPrice)}</strong>`;
+          totalPreview.style.display='block';
+          document.getElementById('totalAmount').textContent = fmt(data.finalPrice);
+        }catch(e){
+          console.error('Error loading preview:', e);
+          preview.style.display='block';
+          preview.className='alert alert-warning';
+          preview.textContent = 'Không thể tải thông tin giảm giá: ' + (e.message || 'Lỗi không xác định');
+          totalPreview.style.display='none';
+        }
+      }
+      
+      pkgSelect && pkgSelect.addEventListener('change', refreshPreview);
+      refreshPreview();
+    </script>
+  </div>
+</html>

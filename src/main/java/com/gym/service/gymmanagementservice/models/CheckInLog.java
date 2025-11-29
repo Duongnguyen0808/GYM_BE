@@ -33,4 +33,14 @@ public class CheckInLog {
 
     @Column(name = "message")
     private String message;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_package_id")
+    private MemberPackage memberPackage;
+
+    @Column(name = "check_out_time")
+    private OffsetDateTime checkOutTime;
+
+    @Column(name = "session_duration_seconds")
+    private Long sessionDurationSeconds;
 }

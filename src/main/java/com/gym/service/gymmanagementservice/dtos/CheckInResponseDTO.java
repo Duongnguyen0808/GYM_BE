@@ -19,4 +19,5 @@ public class CheckInResponseDTO {
     private String memberFullName;
     private String packageName;
     private OffsetDateTime packageEndDate;
+    private Long sessionDurationSeconds;
 }

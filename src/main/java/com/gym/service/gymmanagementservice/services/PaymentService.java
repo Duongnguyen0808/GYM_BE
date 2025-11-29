@@ -1,6 +1,7 @@
 package com.gym.service.gymmanagementservice.services;
 
 import com.gym.service.gymmanagementservice.config.VNPayConfig;
+import com.gym.service.gymmanagementservice.dtos.SubscriptionRequestDTO;
 import com.gym.service.gymmanagementservice.models.*;
 import com.gym.service.gymmanagementservice.repositories.*;
 import com.gym.service.gymmanagementservice.utils.VNPayUtil;
@@ -28,6 +29,9 @@ public class PaymentService {
     private final VNPayConfig vnPayConfig;
     private final AuthenticationService authenticationService;
     private final SaleService saleService;
+    private final PendingRenewalRepository pendingRenewalRepository;
+    private final PendingUpgradeRepository pendingUpgradeRepository;
+    private final SubscriptionService subscriptionService;
 
     @Transactional
     public String createSubscriptionPaymentUrl(HttpServletRequest req, Long memberId, Long packageId) {
@@ -50,8 +54,9 @@ public class PaymentService {
         // 2. Tạo Transaction với status PENDING
         Transaction transaction = Transaction.builder()
                 .amount(gymPackage.getPrice())
-                .paymentMethod(PaymentMethod.BANK_TRANSFER) // Mặc định cho VNPay
+                .paymentMethod(PaymentMethod.VN_PAY)
                 .status(TransactionStatus.PENDING)
+                .kind(TransactionKind.SUBSCRIPTION_NEW)
                 .transactionDate(OffsetDateTime.now())
                 .createdBy(currentUser)
                 .memberPackage(pendingSubscription)
@@ -59,6 +64,40 @@ public class PaymentService {
         Transaction savedTransaction = transactionRepository.save(transaction);
 
         // 3. Tạo URL thanh toán VNPay
+        return VNPayUtil.createPaymentUrl(req, vnPayConfig, savedTransaction.getId(), savedTransaction.getAmount());
+    }
+
+    // Hàm tạo yêu cầu thanh toán cho GIA HẠN GÓI TẬP
+    @Transactional
+    public String createRenewPaymentUrl(HttpServletRequest req, Long memberId, Long packageId, Long assignedPtId) {
+        User currentUser = authenticationService.getCurrentAuthenticatedUser();
+        memberRepository.findById(memberId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy hội viên ID: " + memberId));
+        GymPackage gymPackage = gymPackageRepository.findById(packageId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy gói tập ID: " + packageId));
+
+        // Tạo Transaction PENDING cho gia hạn
+        Transaction transaction = Transaction.builder()
+                .amount(gymPackage.getPrice())
+                .paymentMethod(PaymentMethod.VN_PAY)
+                .status(TransactionStatus.PENDING)
+                .kind(TransactionKind.SUBSCRIPTION_RENEW)
+                .transactionDate(OffsetDateTime.now())
+                .createdBy(currentUser)
+                .memberPackage(null) // Chưa có package, sẽ tạo sau khi thanh toán thành công
+                .sale(null)
+                .build();
+        Transaction savedTransaction = transactionRepository.save(transaction);
+
+        // Lưu thông tin gia hạn vào bảng pending
+        PendingRenewal pendingRenewal = PendingRenewal.builder()
+                .transactionId(savedTransaction.getId())
+                .memberId(memberId)
+                .packageId(packageId)
+                .assignedPtId(assignedPtId)
+                .build();
+        pendingRenewalRepository.save(pendingRenewal);
+
         return VNPayUtil.createPaymentUrl(req, vnPayConfig, savedTransaction.getId(), savedTransaction.getAmount());
     }
 
@@ -76,8 +115,9 @@ public class PaymentService {
 
         Transaction transaction = Transaction.builder()
                 .amount(sale.getTotalAmount())
-                .paymentMethod(PaymentMethod.BANK_TRANSFER) // Mặc định cho VNPay
+                .paymentMethod(PaymentMethod.VN_PAY)
                 .status(TransactionStatus.PENDING)
+                .kind(TransactionKind.SALE)
                 .transactionDate(OffsetDateTime.now())
                 .createdBy(currentUser)
                 .memberPackage(null)
@@ -87,7 +127,128 @@ public class PaymentService {
 
         // (Không cần cập nhật Sale status vì nó đã là PENDING_PAYMENT từ SaleService)
 
-        String orderInfo = "Thanh toan hoa don san pham #" + sale.getId();
+        return VNPayUtil.createPaymentUrl(req, vnPayConfig, savedTransaction.getId(), savedTransaction.getAmount());
+    }
+
+    // Hàm tạo yêu cầu thanh toán cho NÂNG CẤP GÓI TẬP
+    @Transactional
+    public String createUpgradePaymentUrl(HttpServletRequest req, Long subscriptionId, Long newPackageId) {
+        User currentUser = authenticationService.getCurrentAuthenticatedUser();
+        
+        // Tính toán số tiền phải trả (tương tự upgradeSubscription nhưng chưa tạo gói mới)
+        MemberPackage current = memberPackageRepository.findById(subscriptionId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy gói đăng ký với ID: " + subscriptionId));
+        
+        if (current.getStatus() != SubscriptionStatus.ACTIVE) {
+            throw new IllegalStateException("Chỉ nâng cấp từ gói đang hoạt động.");
+        }
+
+        GymPackage currentPkg = current.getGymPackage();
+        GymPackage newPkg = gymPackageRepository.findById(newPackageId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy gói tập với ID: " + newPackageId));
+
+        if (newPkg.getPrice().compareTo(currentPkg.getPrice()) <= 0) {
+            throw new IllegalStateException("Gói mới phải có giá cao hơn gói hiện tại để nâng cấp.");
+        }
+
+        // Tính giá trị hoàn lại và số tiền phải trả
+        OffsetDateTime now = OffsetDateTime.now();
+        java.math.BigDecimal refundValue = java.math.BigDecimal.ZERO;
+
+        if (currentPkg.getPackageType() == PackageType.PT_SESSION) {
+            Integer totalSessions = currentPkg.getNumberOfSessions() != null ? currentPkg.getNumberOfSessions() : 0;
+            Integer remainingSessions = current.getRemainingSessions() != null ? current.getRemainingSessions() : 0;
+            
+            if (totalSessions <= 0 || remainingSessions <= 0) {
+                throw new IllegalStateException("Gói PT không hợp lệ hoặc đã hết buổi.");
+            }
+
+            java.math.BigDecimal perSessionValue = currentPkg.getPrice().divide(
+                java.math.BigDecimal.valueOf(totalSessions), 2, java.math.RoundingMode.HALF_UP);
+            
+            // Chỉ tính hoàn lại cho số buổi ban đầu (không tính buổi gia hạn)
+            int sessionsToRefund = Math.min(remainingSessions, totalSessions);
+            refundValue = perSessionValue.multiply(java.math.BigDecimal.valueOf(sessionsToRefund));
+            
+            // Đảm bảo giá trị hoàn lại không vượt quá giá đã thanh toán
+            if (refundValue.compareTo(currentPkg.getPrice()) > 0) {
+                refundValue = currentPkg.getPrice();
+            }
+            
+        } else if (currentPkg.getPackageType() == PackageType.GYM_ACCESS) {
+            // Gói GYM_ACCESS: Tính hoàn lại theo ngày (từ tổng số ngày thực tế)
+            if (current.getEndDate() == null) {
+                throw new IllegalStateException("Gói tập không có ngày kết thúc.");
+            }
+            
+            if (current.getStartDate() == null) {
+                throw new IllegalStateException("Gói tập không có ngày bắt đầu.");
+            }
+            
+            // Tính tổng số ngày thực tế từ startDate đến endDate
+            long totalDays = java.time.temporal.ChronoUnit.DAYS.between(
+                current.getStartDate(), current.getEndDate());
+            long remainingDays = java.time.temporal.ChronoUnit.DAYS.between(now, current.getEndDate());
+            
+            if (remainingDays <= 0) {
+                throw new IllegalStateException("Gói tập đã hết hạn.");
+            }
+
+            if (totalDays <= 0) {
+                throw new IllegalStateException("Gói tập không hợp lệ (không có thời hạn).");
+            }
+
+            java.math.BigDecimal dailyValue = currentPkg.getPrice().divide(
+                java.math.BigDecimal.valueOf(totalDays), 2, java.math.RoundingMode.HALF_UP);
+            refundValue = dailyValue.multiply(java.math.BigDecimal.valueOf(remainingDays));
+        } else if (currentPkg.getPackageType() == PackageType.PER_VISIT) {
+            if (current.getEndDate() == null) {
+                throw new IllegalStateException("Gói tập không có ngày kết thúc.");
+            }
+            
+            long totalDays = currentPkg.getDurationDays();
+            long remainingDays = java.time.temporal.ChronoUnit.DAYS.between(now, current.getEndDate());
+            
+            if (remainingDays <= 0 || totalDays <= 0) {
+                throw new IllegalStateException("Gói tập đã hết hạn hoặc không hợp lệ.");
+            }
+
+            java.math.BigDecimal dailyValue = currentPkg.getPrice().divide(
+                java.math.BigDecimal.valueOf(totalDays), 2, java.math.RoundingMode.HALF_UP);
+            refundValue = dailyValue.multiply(java.math.BigDecimal.valueOf(remainingDays));
+        }
+
+        // Tính giá gói mới (có thể có giảm giá)
+        Member member = current.getMember();
+        java.math.BigDecimal newPackagePrice = subscriptionService.calculateFinalPrice(member, newPkg);
+        java.math.BigDecimal amountToPay = newPackagePrice.subtract(refundValue);
+        
+        if (amountToPay.compareTo(java.math.BigDecimal.ZERO) < 0) {
+            amountToPay = java.math.BigDecimal.ZERO;
+        }
+
+        // Tạo Transaction PENDING
+        Transaction transaction = Transaction.builder()
+                .amount(amountToPay)
+                .paymentMethod(PaymentMethod.VN_PAY)
+                .status(TransactionStatus.PENDING)
+                .kind(TransactionKind.SUBSCRIPTION_UPGRADE)
+                .transactionDate(now)
+                .createdBy(currentUser)
+                .memberPackage(current) // Lưu gói cũ để xử lý sau
+                .sale(null)
+                .build();
+        
+        Transaction savedTransaction = transactionRepository.save(transaction);
+
+        // Lưu thông tin upgrade vào bảng pending
+        PendingUpgrade pendingUpgrade = PendingUpgrade.builder()
+                .transactionId(savedTransaction.getId())
+                .subscriptionId(subscriptionId)
+                .newPackageId(newPackageId)
+                .build();
+        pendingUpgradeRepository.save(pendingUpgrade);
+
         return VNPayUtil.createPaymentUrl(req, vnPayConfig, savedTransaction.getId(), savedTransaction.getAmount());
     }
 
@@ -128,15 +289,40 @@ public class PaymentService {
             MemberPackage subscription = transaction.getMemberPackage();
             if (subscription != null && subscription.getStatus() == SubscriptionStatus.PENDING) {
                 subscription.setStatus(SubscriptionStatus.ACTIVE);
+                OffsetDateTime startDate = OffsetDateTime.now();
 
-                // Cập nhật ngày bắt đầu/kết thúc dựa trên loại gói
-                if(subscription.getGymPackage().getPackageType() == PackageType.GYM_ACCESS || subscription.getGymPackage().getPackageType() == PackageType.PER_VISIT) {
-                    OffsetDateTime startDate = OffsetDateTime.now();
-                    OffsetDateTime endDate = startDate.plusDays(subscription.getGymPackage().getDurationDays());
-                    subscription.setStartDate(startDate);
-                    subscription.setEndDate(endDate);
+                GymPackage gymPackage = subscription.getGymPackage();
+                if (gymPackage != null) {
+                    PackageType packageType = gymPackage.getPackageType();
+
+                    if (packageType == PackageType.GYM_ACCESS) {
+                        OffsetDateTime endDate;
+                        if (gymPackage.getDurationMonths() != null && gymPackage.getDurationMonths() > 0) {
+                            endDate = startDate.plusMonths(gymPackage.getDurationMonths());
+                        } else if (gymPackage.getDurationDays() != null && gymPackage.getDurationDays() > 0) {
+                            endDate = startDate.plusDays(gymPackage.getDurationDays());
+                        } else {
+                            throw new IllegalStateException("Gói GYM_ACCESS không có thời hạn hợp lệ để kích hoạt.");
+                        }
+                        subscription.setStartDate(startDate);
+                        subscription.setEndDate(endDate);
+                    } else if (packageType == PackageType.PER_VISIT) {
+                        Integer durationDays = gymPackage.getDurationDays();
+                        if (durationDays == null || durationDays <= 0) {
+                            throw new IllegalStateException("Gói PER_VISIT phải có durationDays hợp lệ.");
+                        }
+                        OffsetDateTime endDate = startDate.plusDays(durationDays);
+                        subscription.setStartDate(startDate);
+                        subscription.setEndDate(endDate);
+                    } else if (packageType == PackageType.PT_SESSION) {
+                        subscription.setStartDate(startDate);
+                        if (gymPackage.getDurationMonths() != null && gymPackage.getDurationMonths() > 0) {
+                            subscription.setEndDate(startDate.plusMonths(gymPackage.getDurationMonths()));
+                        } else {
+                            subscription.setEndDate(null);
+                        }
+                    }
                 }
-                // (Gói PT không cần ngày bắt đầu/kết thúc)
 
                 memberPackageRepository.save(subscription);
                 log.info("Activated MemberPackage {} for Transaction {}.", subscription.getId(), transactionId);
@@ -157,6 +343,57 @@ public class PaymentService {
                     log.error("!!! CRITICAL: Payment Success but FAILED to deduct stock for Sale ID: {}", sale.getId(), e);
                     // (Bạn có thể thêm logic thông báo cho admin ở đây)
                     // Vẫn trả về 'true' vì tiền đã nhận
+                }
+            }
+
+            // Xử lý Gia hạn gói tập
+            if (transaction.getKind() == TransactionKind.SUBSCRIPTION_RENEW) {
+                Optional<PendingRenewal> pendingRenewalOpt = pendingRenewalRepository.findByTransactionId(transactionId);
+                if (pendingRenewalOpt.isPresent()) {
+                    PendingRenewal pendingRenewal = pendingRenewalOpt.get();
+                    try {
+                        // Tạo SubscriptionRequestDTO để gọi renewSubscription
+                        SubscriptionRequestDTO renewRequest = new SubscriptionRequestDTO();
+                        renewRequest.setMemberId(pendingRenewal.getMemberId());
+                        renewRequest.setPackageId(pendingRenewal.getPackageId());
+                        renewRequest.setPaymentMethod(PaymentMethod.VN_PAY);
+                        renewRequest.setAssignedPtId(pendingRenewal.getAssignedPtId());
+                        
+                        subscriptionService.renewSubscription(renewRequest);
+                        log.info("Successfully renewed subscription for member {} with Transaction {}.", 
+                                pendingRenewal.getMemberId(), transactionId);
+                        
+                        // Xóa pending renewal sau khi xử lý xong
+                        pendingRenewalRepository.delete(pendingRenewal);
+                    } catch (Exception e) {
+                        log.error("Failed to process renew for Transaction {}: {}", transactionId, e.getMessage());
+                    }
+                } else {
+                    log.warn("PendingRenewal not found for RENEW Transaction {}.", transactionId);
+                }
+            }
+
+            // Xử lý Nâng cấp gói tập
+            if (transaction.getKind() == TransactionKind.SUBSCRIPTION_UPGRADE) {
+                Optional<PendingUpgrade> pendingUpgradeOpt = pendingUpgradeRepository.findByTransactionId(transactionId);
+                if (pendingUpgradeOpt.isPresent()) {
+                    PendingUpgrade pendingUpgrade = pendingUpgradeOpt.get();
+                    try {
+                        subscriptionService.upgradeSubscription(
+                                pendingUpgrade.getSubscriptionId(),
+                                pendingUpgrade.getNewPackageId(),
+                                PaymentMethod.VN_PAY
+                        );
+                        log.info("Successfully upgraded subscription {} to package {} with Transaction {}.", 
+                                pendingUpgrade.getSubscriptionId(), pendingUpgrade.getNewPackageId(), transactionId);
+                        
+                        // Xóa pending upgrade sau khi xử lý xong
+                        pendingUpgradeRepository.delete(pendingUpgrade);
+                    } catch (Exception e) {
+                        log.error("Failed to process upgrade for Transaction {}: {}", transactionId, e.getMessage());
+                    }
+                } else {
+                    log.warn("PendingUpgrade not found for UPGRADE Transaction {}.", transactionId);
                 }
             }
 

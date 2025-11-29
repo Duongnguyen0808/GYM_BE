@@ -24,6 +24,7 @@ public class MemberResponseDTO {
     private LocalDate birthDate;
     private String address;
     private String barcode;
+    private String avatarUrl;
     private OffsetDateTime createdAt;
 
     public static MemberResponseDTO fromMember(Member member) {
@@ -36,6 +37,7 @@ public class MemberResponseDTO {
                 .birthDate(member.getBirthDate())
                 .address(member.getAddress())
                 .barcode(member.getBarcode())
+                .avatarUrl(member.getAvatarUrl())
                 .createdAt(member.getCreatedAt())
                 .build();
     }

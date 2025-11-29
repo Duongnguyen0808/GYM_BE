@@ -13,4 +13,11 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     Optional<Member> findByPhoneNumber(String phoneNumber);
     Optional<Member> findByEmail(String email);
     Optional<Member> findByBarcode(String barcode);
+    
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query(value = "DELETE FROM members WHERE id = :memberId", nativeQuery = true)
+    void deleteByIdNative(@org.springframework.data.repository.query.Param("memberId") Long memberId);
+    
+    @org.springframework.data.jpa.repository.Query(value = "SELECT user_account_id FROM members WHERE id = :memberId LIMIT 1", nativeQuery = true)
+    java.util.Optional<Long> findUserIdByMemberId(@org.springframework.data.repository.query.Param("memberId") Long memberId);
 }

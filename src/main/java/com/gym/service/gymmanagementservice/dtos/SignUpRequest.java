@@ -1,7 +1,6 @@
 package com.gym.service.gymmanagementservice.dtos;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -19,9 +18,8 @@ public class SignUpRequest {
     @Size(min = 10, max = 10, message = "Số điện thoại phải có đúng 10 chữ số")
     private String phoneNumber;
 
-    @Schema(description = "Địa chỉ email của người dùng (Không bắt buộc)", example = "nguyenvana@example.com")
-    @Email(message = "Email không đúng định dạng")
-    private String email;
+    // Email đã bỏ, không cần nữa
+    // private String email;
 
     @Schema(description = "Mật khẩu (ít nhất 6 ký tự)", example = "password123")
     @NotBlank(message = "Mật khẩu là bắt buộc")

@@ -36,10 +36,19 @@ public class GymPackage {
     private PackageType packageType; // Phân loại gói
 
     @Column(name = "duration_days")
-    private Integer durationDays; // Dùng cho GYM_ACCESS, PER_VISIT
+    private Integer durationDays; // Dùng cho PER_VISIT hoặc backward compatibility cho GYM_ACCESS
+
+    @Column(name = "duration_months")
+    private Integer durationMonths; // Dùng cho PT_SESSION và GYM_ACCESS - thời hạn tính theo tháng (1, 2, 3, 6, 12, 24...)
 
     @Column(name = "number_of_sessions")
     private Integer numberOfSessions; // Dùng cho PT_SESSION, PER_VISIT
+
+    @Column(name = "sessions_per_week")
+    private Integer sessionsPerWeek; // Quy định số buổi/tuần (tuỳ chọn)
+
+    @Column(name = "is_unlimited")
+    private Boolean unlimited; // Không giới hạn lượt/buổi (tuỳ chọn)
 
     @Column(name = "start_time_limit")
     private LocalTime startTimeLimit; // Giờ check-in sớm nhất (HH:mm)
@@ -55,6 +64,16 @@ public class GymPackage {
 
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
+
+    @Column(name = "hinh_anh", length = 1024)
+    private String hinhAnh;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assigned_pt_id")
+    private User assignedPt; // PT được gán cho gói PT (chỉ dùng cho PT_SESSION)
+
+    @Column(name = "allowed_weekdays", length = 100)
+    private String allowedWeekdays; // Các thứ trong tuần cho phép tập, định dạng CSV: "MON,WED,FRI" (chỉ dùng cho PT_SESSION)
 
     @PrePersist
     protected void onCreate() {

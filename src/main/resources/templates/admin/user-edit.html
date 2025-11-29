@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{fragments/layout :: layout(~{::content}, ${pageTitle})}">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <div th:fragment="content">
 
     <h2 class="mb-4">Chỉnh sửa Nhân viên: <span th:text="${userProfile.fullName}"></span></h2>
@@ -38,13 +37,13 @@
                 </div>
 
                 <div class="mb-3">
-                    <label for="role" class="form-label">Vai trò (Role)</label>
+                    <label for="role" class="form-label">Vai trò</label>
                     <select th:field="*{role}" id="role" class="form-select"
                             th:classappend="${#fields.hasErrors('role')} ? 'is-invalid' : ''">
                         <option value="">-- Chọn vai trò --</option>
                         <option th:each="roleValue : ${allRoles}"
                                 th:value="${roleValue}"
-                                th:text="${roleValue}">
+                                th:text="${roleValue == 'ADMIN' ? 'Quản trị viên' : (roleValue == 'STAFF' ? 'Nhân viên' : (roleValue == 'PT' ? 'Huấn luyện viên' : roleValue))}">
                         </option>
                     </select>
                     <div th:if="${#fields.hasErrors('role')}" th:errors="*{role}" class="invalid-feedback"></div>

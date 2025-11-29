@@ -1,6 +1,7 @@
 package com.gym.service.gymmanagementservice.dtos;
 
 import com.gym.service.gymmanagementservice.models.PaymentMethod;
+import com.gym.service.gymmanagementservice.models.TimeSlot;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -21,4 +22,10 @@ public class SubscriptionRequestDTO {
 
     @Schema(description = "ID của PT được gán (chỉ dùng khi mua gói PT_SESSION)")
     private Long assignedPtId;
+
+    @Schema(description = "Lịch tập theo tuần, dạng chuỗi CSV ví dụ: MON,WED,FRI")
+    private String allowedWeekdays;
+
+    @Schema(description = "Khung giờ đã chọn (chỉ dùng cho PT_SESSION): MORNING, AFTERNOON_1, AFTERNOON_2, EVENING")
+    private TimeSlot timeSlot;
 }

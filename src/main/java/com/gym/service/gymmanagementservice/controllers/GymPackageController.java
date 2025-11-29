@@ -2,7 +2,9 @@ package com.gym.service.gymmanagementservice.controllers;
 
 import com.gym.service.gymmanagementservice.dtos.PackageRequestDTO;
 import com.gym.service.gymmanagementservice.dtos.PackageResponseDTO;
+import com.gym.service.gymmanagementservice.models.Promotion;
 import com.gym.service.gymmanagementservice.services.PackageService;
+import com.gym.service.gymmanagementservice.services.PromotionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -14,7 +16,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/packages")
@@ -24,6 +29,7 @@ import java.util.List;
 public class GymPackageController {
 
     private final PackageService packageService;
+    private final PromotionService promotionService;
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -39,6 +45,21 @@ public class GymPackageController {
     @Operation(summary = "Lấy danh sách tất cả các gói tập (Admin, Staff)")
     public ResponseEntity<List<PackageResponseDTO>> getAllPackages() {
         List<PackageResponseDTO> packages = packageService.getAllPackages();
+        return ResponseEntity.ok(packages);
+    }
+
+    @GetMapping("/search")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @Operation(summary = "Tìm kiếm/lọc gói tập")
+    public ResponseEntity<List<PackageResponseDTO>> searchPackages(
+            @RequestParam(value = "q", required = false) String q,
+            @RequestParam(value = "minPrice", required = false) java.math.BigDecimal minPrice,
+            @RequestParam(value = "maxPrice", required = false) java.math.BigDecimal maxPrice,
+            @RequestParam(value = "durationDays", required = false) Integer durationDays,
+            @RequestParam(value = "type", required = false) String type,
+            @RequestParam(value = "active", required = false) Boolean active
+    ) {
+        List<PackageResponseDTO> packages = packageService.searchPackages(q, minPrice, maxPrice, durationDays, type, active);
         return ResponseEntity.ok(packages);
     }
 
@@ -63,6 +84,33 @@ public class GymPackageController {
     @Operation(summary = "Kích hoạt hoặc vô hiệu hóa một gói tập (Chỉ Admin)")
     public ResponseEntity<Void> togglePackageStatus(@PathVariable Long id) {
         packageService.togglePackageStatus(id);
+        return ResponseEntity.noContent().build();
+    }
+    
+    @GetMapping("/{id}/promotion")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @Operation(summary = "Lấy thông tin promotion đang active cho gói tập")
+    public ResponseEntity<Map<String, Object>> getPackagePromotion(@PathVariable Long id) {
+        Optional<Promotion> promotion = promotionService.getActivePromotionForPackage(id);
+        
+        Map<String, Object> response = new HashMap<>();
+        if (promotion.isPresent()) {
+            Promotion promo = promotion.get();
+            response.put("hasPromotion", true);
+            response.put("name", promo.getName());
+            response.put("discountPercent", promo.getDiscountPercent());
+        } else {
+            response.put("hasPromotion", false);
+        }
+        
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Xóa gói tập (Chỉ Admin)")
+    public ResponseEntity<Void> deletePackage(@PathVariable Long id) {
+        packageService.deletePackage(id);
         return ResponseEntity.noContent().build();
     }
 }

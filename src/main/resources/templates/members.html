@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{fragments/layout :: layout(~{::content}, 'Quản lý Hội viên')}">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
 
 <div th:fragment="content">
 
@@ -14,29 +13,37 @@
 
     <div class="card shadow-sm">
         <div class="card-body">
+            <form th:action="@{/members}" method="get" class="row g-2 mb-3">
+                <div class="col-md-6">
+                    <input type="text" class="form-control" name="q" placeholder="Tìm theo tên/SĐT" th:value="${q}">
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-outline-primary">Tìm kiếm</button>
+                    <a th:href="@{/members}" class="btn btn-outline-secondary">Xóa lọc</a>
+                </div>
+            </form>
 
             <table class="table table-hover align-middle">
                 <thead class="table-light">
                 <tr>
-                    <th scope="col">ID Hội viên</th>
                     <th scope="col">Họ và Tên</th>
                     <th scope="col">Số điện thoại (Barcode)</th>
-                    <th scope="col">Email</th>
                     <th scope="col">Ngày tham gia</th>
                     <th scope="col" class="text-end">Hành động</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr th:each="member : ${members}">
-                    <th scope="row" th:text="${member.id}">101</th>
                     <td th:text="${member.fullName}">Nguyễn Văn B</td>
                     <td th:text="${member.phoneNumber}">0912345678</td>
-                    <td th:text="${member.email}">member@example.com</td>
                     <td th:text="${#temporals.format(member.createdAt, 'dd/MM/yyyy')}">30/10/2025</td>
 
                     <td class="text-end">
                         <a th:href="@{/members/detail/{id}(id=${member.id})}" class="btn btn-sm btn-info text-white">Xem chi tiết</a>
                         <a th:href="@{/members/edit/{id}(id=${member.id})}" class="btn btn-sm btn-outline-primary ms-1">Sửa</a>
+                        <form th:action="@{/members/delete/{id}(id=${member.id})}" method="post" class="d-inline ms-1">
+                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Xóa hội viên này? Hành động không thể hoàn tác.')">Xóa</button>
+                        </form>
                     </td>
                 </tr>
                 </tbody>

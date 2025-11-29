@@ -45,10 +45,6 @@ public class AuthenticationService {
         if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
             throw new IllegalArgumentException("Số điện thoại đã tồn tại.");
         }
-        // (Giữ lại nếu vẫn muốn email là duy nhất)
-        if (request.getEmail() != null && !request.getEmail().isEmpty() && userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Email đã tồn tại.");
-        }
 
         String otp = generateOtp(); // Tạo OTP
         OffsetDateTime otpExpiry = OffsetDateTime.now().plusMinutes(10); // OTP hết hạn sau 10p
@@ -56,7 +52,7 @@ public class AuthenticationService {
         User user = User.builder()
                 .fullName(request.getFullName())
                 .phoneNumber(request.getPhoneNumber())
-                .email(request.getEmail()) // Lưu email (nếu có)
+                .email(null) // Email không cần nữa
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.STAFF)
                 .enabled(false)
@@ -135,9 +131,6 @@ public class AuthenticationService {
         if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
             throw new IllegalArgumentException("Số điện thoại đã tồn tại.");
         }
-        if (request.getEmail() != null && !request.getEmail().isEmpty() && userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Email đã tồn tại.");
-        }
 
         // Không cho phép tạo Role MEMBER ở đây
         if (request.getRole() == Role.MEMBER) {
@@ -147,7 +140,7 @@ public class AuthenticationService {
         User user = User.builder()
                 .fullName(request.getFullName())
                 .phoneNumber(request.getPhoneNumber())
-                .email(request.getEmail())
+                .email(null) // Email không cần nữa
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole()) // Lấy Role từ DTO
                 .enabled(true) // Kích hoạt ngay

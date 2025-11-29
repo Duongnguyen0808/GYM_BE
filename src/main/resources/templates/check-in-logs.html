@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<div th:fragment="content">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Nhật ký Check-in/Check-out</h2>
+        <div>
+            <a th:href="@{/check-in}" class="btn btn-outline-primary">Quay lại Check-in</a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                <tr>
+                    <th>Thời gian vào</th>
+                    <th>Thời gian ra</th>
+                    <th>Thời lượng</th>
+                    <th>Hội viên</th>
+                    <th>Gói</th>
+                    <th>Loại</th>
+                    <th>Thông tin</th>
+                    <th>Trạng thái</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="log : ${logs}">
+                    <td th:text="${#temporals.format(log.checkInTime.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'dd/MM/yyyy HH:mm')}"></td>
+                    <td th:text="${log.checkOutTime != null ? #temporals.format(log.checkOutTime.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'dd/MM/yyyy HH:mm') : '-'}"></td>
+                    <td th:text="${log.sessionDurationSeconds != null ? (log.sessionDurationSeconds / 60) + ' phút' : '-'}"></td>
+                    <td th:text="${log.member != null ? log.member.fullName : '-'}"></td>
+                    <td th:text="${log.memberPackage != null ? log.memberPackage.gymPackage.name : '-'}"></td>
+                    <td th:text="${log.memberPackage != null ? log.memberPackage.gymPackage.packageType : '-'}"></td>
+                    <td>
+                        <span th:if="${log.memberPackage != null and log.memberPackage.gymPackage.packageType.name() == 'PER_VISIT'}"
+                              th:text="'Còn: ' + (log.memberPackage.remainingSessions != null ? log.memberPackage.remainingSessions : 0) + ' buổi'"></span>
+                        <span th:if="${log.memberPackage != null and log.memberPackage.gymPackage.packageType.name() == 'GYM_ACCESS'}"
+                              th:text="'Hết hạn: ' + #temporals.format(log.memberPackage.endDate.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'dd/MM/yyyy')"></span>
+                    </td>
+                    <td>
+                        <span th:text="${log.status}"></span>
+                        <div class="small text-muted" th:text="${log.message}"></div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="alert alert-info mt-3">
+        Hiển thị tối đa 200 bản ghi mới nhất.
+    </div>
+
+    <div class="mt-3">
+        <a th:href="@{/check-in/logs}" class="btn btn-outline-secondary">Làm mới</a>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function(){
+            // Optional: SSE append new rows in future
+        });
+    </script>
+
+</div>
+
+</html>

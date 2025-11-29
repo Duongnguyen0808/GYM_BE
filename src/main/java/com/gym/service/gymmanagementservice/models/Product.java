@@ -40,6 +40,9 @@ public class Product {
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
 
+    @Column(name = "hinh_anh", length = 1024)
+    private String hinhAnh;
+
     @PrePersist
     protected void onCreate() {
         createdAt = OffsetDateTime.now();

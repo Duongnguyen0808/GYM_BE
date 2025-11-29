@@ -1,143 +1,486 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{fragments/layout :: layout(~{::content}, ${pageTitle})}">
-
-<div th:fragment="content">
-
-    <h2 class="mb-4" th:text="${packageId != null} ? 'Cập nhật Gói tập' : 'Tạo Gói tập mới'"></h2>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+  <div th:fragment="content">
+    <h2
+      class="mb-4"
+      th:text="${packageId != null} ? 'Cập nhật Gói tập' : 'Tạo Gói tập mới'"
+    ></h2>
 
     <div class="card shadow-sm">
-        <div class="card-body">
+      <div class="card-body">
+        <form
+          th:action="${packageId != null} ? @{/admin/packages/edit/{id}(id=${packageId})} : @{/admin/packages/create}"
+          th:object="${packageRequest}"
+          method="post"
+          enctype="multipart/form-data"
+        >
+          <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger">
+            <p th:each="err : ${#fields.globalErrors()}" th:text="${err}"></p>
+          </div>
 
-            <form th:action="${packageId != null} ? @{/admin/packages/edit/{id}(id=${packageId})} : @{/admin/packages/create}"
-                  th:object="${packageRequest}"
-                  method="post">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="name" class="form-label">Tên Gói tập</label>
+                <input
+                  type="text"
+                  th:field="*{name}"
+                  id="name"
+                  class="form-control"
+                  th:classappend="${#fields.hasErrors('name')} ? 'is-invalid' : ''"
+                />
+                <div
+                  th:if="${#fields.hasErrors('name')}"
+                  th:errors="*{name}"
+                  class="invalid-feedback"
+                ></div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="price" class="form-label">Giá (VNĐ)</label>
+                <input
+                  type="number"
+                  th:field="*{price}"
+                  id="price"
+                  class="form-control"
+                  th:classappend="${#fields.hasErrors('price')} ? 'is-invalid' : ''"
+                />
+                <div
+                  th:if="${#fields.hasErrors('price')}"
+                  th:errors="*{price}"
+                  class="invalid-feedback"
+                ></div>
+              </div>
+            </div>
+          </div>
 
-                <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger">
-                    <p th:each="err : ${#fields.globalErrors()}" th:text="${err}"></p>
+          <div class="mb-3">
+            <label class="form-label">Hình ảnh Gói tập</label>
+            <div class="d-flex align-items-start gap-3">
+              <div
+                style="
+                  width: 140px;
+                  height: 140px;
+                  border: 1px dashed #ccc;
+                  border-radius: 8px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  overflow: hidden;
+                  background: #f8f9fa;
+                  position: relative;
+                "
+              >
+                <img
+                  id="packageImagePreview"
+                  th:src="${packageRequest.imageUrl != null} ? ${packageRequest.imageUrl} : ''"
+                  alt="Preview"
+                  style="
+                    max-width: 100%;
+                    max-height: 100%;
+                    object-fit: cover;
+                    display: none;
+                  "
+                />
+                <span
+                  id="packageImagePlaceholder"
+                  class="text-muted"
+                  style="font-size: 0.9rem"
+                  >Chưa có ảnh</span
+                >
+              </div>
+              <div class="flex-grow-1">
+                <input
+                  id="packageImageInput"
+                  type="file"
+                  name="imageFile"
+                  accept="image/*"
+                  class="form-control"
+                />
+                <small class="text-muted d-block mt-2"
+                  >Hỗ trợ jpg, png, webp. Ảnh sẽ được tải lên Cloudinary.</small
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="description" class="form-label">Mô tả</label>
+            <textarea
+              th:field="*{description}"
+              id="description"
+              rows="3"
+              class="form-control"
+            ></textarea>
+          </div>
+
+          <hr />
+
+          <div class="row">
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="packageTypeSelect" class="form-label"
+                  >Loại gói</label
+                >
+                <select
+                  th:field="*{packageType}"
+                  id="packageTypeSelect"
+                  class="form-select"
+                  th:classappend="${#fields.hasErrors('packageType')} ? 'is-invalid' : ''"
+                >
+                  <option value="">-- Chọn loại gói --</option>
+                  <option
+                    th:each="type : ${allPackageTypes}"
+                    th:value="${type}"
+                    th:text="${type.displayName}"
+                  ></option>
+                </select>
+                <div
+                  th:if="${#fields.hasErrors('packageType')}"
+                  th:errors="*{packageType}"
+                  class="invalid-feedback"
+                ></div>
+              </div>
+            </div>
+
+            <div class="col-md-4" id="durationDaysWrapper" style="display: none;">
+              <div class="mb-3">
+                <label for="durationDays" class="form-label"
+                  >Thời hạn (số ngày)</label
+                >
+                <input
+                  type="number"
+                  th:field="*{durationDays}"
+                  id="durationDays"
+                  class="form-control"
+                  th:classappend="${#fields.hasErrors('durationDays')} ? 'is-invalid' : ''"
+                />
+                <div
+                  th:if="${#fields.hasErrors('durationDays')}"
+                  th:errors="*{durationDays}"
+                  class="invalid-feedback"
+                ></div>
+                <small id="durationHelp" class="form-text text-muted" style="display:none">Gói theo lượt tự động 60 ngày</small>
+              </div>
+            </div>
+
+            <div class="col-md-4" id="durationMonthsWrapper" style="display: none;">
+              <div class="mb-3">
+                <label for="durationMonths" class="form-label"
+                  >Thời hạn (số tháng)</label
+                >
+                <select
+                  th:field="*{durationMonths}"
+                  id="durationMonths"
+                  class="form-select"
+                  th:classappend="${#fields.hasErrors('durationMonths')} ? 'is-invalid' : ''"
+                >
+                  <option value="">-- Chọn số tháng --</option>
+                  <option value="1">1 tháng</option>
+                  <option value="2">2 tháng</option>
+                  <option value="3">3 tháng</option>
+                  <option value="6">6 tháng</option>
+                  <option value="12">12 tháng (1 năm)</option>
+                  <option value="24">24 tháng (2 năm)</option>
+                </select>
+                <div
+                  th:if="${#fields.hasErrors('durationMonths')}"
+                  th:errors="*{durationMonths}"
+                  class="invalid-feedback"
+                ></div>
+                <small class="form-text text-muted">
+                  <span id="durationMonthsHelp">Thời hạn sẽ tính từ ngày khách hàng mua gói</span>
+                </small>
+              </div>
+            </div>
+
+            <div class="col-md-4" id="numberOfSessionsWrapper">
+              <div class="mb-3">
+                <label for="numberOfSessions" class="form-label"
+                  >Số buổi / Số lượt</label
+                >
+                <input
+                  type="number"
+                  th:field="*{numberOfSessions}"
+                  id="numberOfSessions"
+                  class="form-control"
+                  th:classappend="${#fields.hasErrors('numberOfSessions')} ? 'is-invalid' : ''"
+                />
+                <div
+                  th:if="${#fields.hasErrors('numberOfSessions')}"
+                  th:errors="*{numberOfSessions}"
+                  class="invalid-feedback"
+                ></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Field chọn PT (chỉ hiển thị khi chọn PT_SESSION) -->
+          <div class="row" id="ptSelectionWrapper" style="display: none;">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="assignedPtId" class="form-label">Gán PT cho gói (tuỳ chọn)</label>
+                <select
+                  th:field="*{assignedPtId}"
+                  id="assignedPtId"
+                  class="form-select"
+                >
+                  <option value="">-- Không gán PT --</option>
+                  <option
+                    th:each="pt : ${allPts}"
+                    th:value="${pt.id}"
+                    th:text="${pt.fullName + ' (' + pt.phoneNumber + ')'}"
+                  ></option>
+                </select>
+                <small class="form-text text-muted">
+                  Nếu gán PT ở đây, tất cả hội viên mua gói này sẽ tự động được gán với PT này. 
+                  Hội viên sẽ chọn khung giờ khi mua gói.
+                </small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Thông tin khung giờ</label>
+                <div class="alert alert-info mb-0">
+                  <small>
+                    <strong>Các khung giờ có sẵn:</strong><br>
+                    • <strong>Sáng:</strong> 9h - 11h<br>
+                    • <strong>Chiều 1:</strong> 13h - 15h<br>
+                    • <strong>Chiều 2:</strong> 16h - 18h<br>
+                    • <strong>Tối:</strong> 19h - 21h<br>
+                    <em>Hội viên sẽ chọn khung giờ khi mua gói. Mỗi khung giờ chỉ cho 1 hội viên.</em>
+                  </small>
                 </div>
+              </div>
+            </div>
+          </div>
 
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="name" class="form-label">Tên Gói tập</label>
-                            <input type="text" th:field="*{name}" id="name" class="form-control"
-                                   th:classappend="${#fields.hasErrors('name')} ? 'is-invalid' : ''">
-                            <div th:if="${#fields.hasErrors('name')}" th:errors="*{name}" class="invalid-feedback"></div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="price" class="form-label">Giá (VNĐ)</label>
-                            <input type="number" th:field="*{price}" id="price" class="form-control"
-                                   th:classappend="${#fields.hasErrors('price')} ? 'is-invalid' : ''">
-                            <div th:if="${#fields.hasErrors('price')}" th:errors="*{price}" class="invalid-feedback"></div>
-                        </div>
-                    </div>
+          <!-- Field chọn các thứ trong tuần (chỉ hiển thị khi chọn PT_SESSION) -->
+          <div class="row" id="weekdaysSelectionWrapper" style="display: none;">
+            <div class="col-12">
+              <div class="mb-3">
+                <label class="form-label">Chọn các thứ trong tuần cho phép tập</label>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input weekday-checkbox" type="checkbox" value="MON" id="weekday-mon">
+                  <label class="form-check-label" for="weekday-mon">Thứ 2</label>
                 </div>
-
-                <div class="mb-3">
-                    <label for="description" class="form-label">Mô tả</label>
-                    <textarea th:field="*{description}" id="description" rows="3" class="form-control"></textarea>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input weekday-checkbox" type="checkbox" value="TUE" id="weekday-tue">
+                  <label class="form-check-label" for="weekday-tue">Thứ 3</label>
                 </div>
-
-                <hr>
-
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="mb-3">
-                            <label for="packageTypeSelect" class="form-label">Loại gói</label>
-                            <select th:field="*{packageType}" id="packageTypeSelect" class="form-select"
-                                    th:classappend="${#fields.hasErrors('packageType')} ? 'is-invalid' : ''">
-                                <option value="">-- Chọn loại gói --</option>
-                                <option th:each="type : ${allPackageTypes}"
-                                        th:value="${type}"
-                                        th:text="${type.name()}"></option>
-                            </select>
-                            <div th:if="${#fields.hasErrors('packageType')}" th:errors="*{packageType}" class="invalid-feedback"></div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-4" id="durationDaysWrapper">
-                        <div class="mb-3">
-                            <label for="durationDays" class="form-label">Thời hạn (số ngày)</label>
-                            <input type="number" th:field="*{durationDays}" id="durationDays" class="form-control"
-                                   th:classappend="${#fields.hasErrors('durationDays')} ? 'is-invalid' : ''">
-                            <div th:if="${#fields.hasErrors('durationDays')}" th:errors="*{durationDays}" class="invalid-feedback"></div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-4" id="numberOfSessionsWrapper">
-                        <div class="mb-3">
-                            <label for="numberOfSessions" class="form-label">Số buổi / Số lượt</label>
-                            <input type="number" th:field="*{numberOfSessions}" id="numberOfSessions" class="form-control"
-                                   th:classappend="${#fields.hasErrors('numberOfSessions')} ? 'is-invalid' : ''">
-                            <div th:if="${#fields.hasErrors('numberOfSessions')}" th:errors="*{numberOfSessions}" class="invalid-feedback"></div>
-                        </div>
-                    </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input weekday-checkbox" type="checkbox" value="WED" id="weekday-wed">
+                  <label class="form-check-label" for="weekday-wed">Thứ 4</label>
                 </div>
-
-                <div id="timeLimitsWrapper">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="startTimeLimit" class="form-label">Giới hạn giờ bắt đầu (Off-peak)</label>
-                                <input type="time" th:field="*{startTimeLimit}" id="startTimeLimit" class="form-control"
-                                       th:classappend="${#fields.hasErrors('startTimeLimit')} ? 'is-invalid' : ''">
-                                <small class="form-text text-muted">Bỏ trống nếu không giới hạn (gói Full-time)</small>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="endTimeLimit" class="form-label">Giới hạn giờ kết thúc (Off-peak)</label>
-                                <input type="time" th:field="*{endTimeLimit}" id="endTimeLimit" class="form-control"
-                                       th:classappend="${#fields.hasErrors('endTimeLimit')} ? 'is-invalid' : ''">
-                            </div>
-                        </div>
-                    </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input weekday-checkbox" type="checkbox" value="THU" id="weekday-thu">
+                  <label class="form-check-label" for="weekday-thu">Thứ 5</label>
                 </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input weekday-checkbox" type="checkbox" value="FRI" id="weekday-fri">
+                  <label class="form-check-label" for="weekday-fri">Thứ 6</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input weekday-checkbox" type="checkbox" value="SAT" id="weekday-sat">
+                  <label class="form-check-label" for="weekday-sat">Thứ 7</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input weekday-checkbox" type="checkbox" value="SUN" id="weekday-sun">
+                  <label class="form-check-label" for="weekday-sun">Chủ nhật</label>
+                </div>
+                <input type="hidden" th:field="*{allowedWeekdays}" id="allowedWeekdays" />
+                <small class="form-text text-muted d-block mt-2">
+                  Chọn các thứ trong tuần mà hội viên có thể tập. Hội viên sẽ thấy các thứ này khi mua gói và có thể chọn lại.
+                </small>
+              </div>
+            </div>
+          </div>
 
-                <button type="submit" class="btn btn-primary">
-                    <span th:if="${packageId != null}">Lưu thay đổi</span>
-                    <span th:if="${packageId == null}">Tạo gói tập</span>
-                </button>
-                <a th:href="@{/admin/packages}" class="btn btn-secondary">Hủy</a>
-            </form>
-        </div>
+          <div class="row">
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="sessionsPerWeek" class="form-label">Số buổi/tuần (tuỳ chọn)</label>
+                <input type="number" th:field="*{sessionsPerWeek}" id="sessionsPerWeek" class="form-control" />
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" th:field="*{unlimited}" id="unlimited" />
+                <label class="form-check-label" for="unlimited">Không giới hạn lượt/buổi</label>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary">
+            <span th:if="${packageId != null}">Lưu thay đổi</span>
+            <span th:if="${packageId == null}">Tạo gói tập</span>
+          </button>
+          <a th:href="@{/admin/packages}" class="btn btn-secondary">Hủy</a>
+        </form>
+      </div>
     </div>
 
     <script th:inline="javascript">
-        function togglePackageFields() {
-            const packageType = document.getElementById('packageTypeSelect').value;
+      function togglePackageFields() {
+        const packageType = document.getElementById("packageTypeSelect").value;
 
-            const durationWrapper = document.getElementById('durationDaysWrapper');
-            const sessionsWrapper = document.getElementById('numberOfSessionsWrapper');
-            const timeLimitsWrapper = document.getElementById('timeLimitsWrapper');
+        const durationWrapper = document.getElementById("durationDaysWrapper");
+        const durationMonthsWrapper = document.getElementById("durationMonthsWrapper");
+        const sessionsWrapper = document.getElementById("numberOfSessionsWrapper");
+        const ptSelectionWrapper = document.getElementById("ptSelectionWrapper");
+        const weekdaysSelectionWrapper = document.getElementById("weekdaysSelectionWrapper");
+        const durationInput = document.getElementById("durationDays");
+        const durationHelp = document.getElementById("durationHelp");
+        const durationMonthsHelp = document.getElementById("durationMonthsHelp");
 
-            // Ẩn tất cả trước
-            durationWrapper.style.display = 'none';
-            sessionsWrapper.style.display = 'none';
-            timeLimitsWrapper.style.display = 'none';
+        // Ẩn tất cả trước
+        durationWrapper.style.display = "none";
+        durationMonthsWrapper.style.display = "none";
+        sessionsWrapper.style.display = "none";
+        ptSelectionWrapper.style.display = "none";
+        if (weekdaysSelectionWrapper) weekdaysSelectionWrapper.style.display = "none";
+        durationHelp.style.display = "none";
 
-            if (packageType === 'GYM_ACCESS') {
-                durationWrapper.style.display = 'block';
-                timeLimitsWrapper.style.display = 'block';
-            } else if (packageType === 'PT_SESSION') {
-                sessionsWrapper.style.display = 'block';
-                // Gói PT không có giới hạn giờ hoặc thời hạn
-            } else if (packageType === 'PER_VISIT') {
-                durationWrapper.style.display = 'block';
-                sessionsWrapper.style.display = 'block';
-                timeLimitsWrapper.style.display = 'block';
+        if (packageType === "GYM_ACCESS") {
+          // Gói thời hạn: Dùng dropdown chọn tháng (3, 6, 12, 24 tháng)
+          durationMonthsWrapper.style.display = "block";
+          if (durationMonthsHelp) {
+            durationMonthsHelp.textContent = "Thời hạn sẽ tính từ ngày khách hàng mua gói";
+          }
+        } else if (packageType === "PT_SESSION") {
+          sessionsWrapper.style.display = "block";
+          durationMonthsWrapper.style.display = "block";
+          ptSelectionWrapper.style.display = "block"; // Hiển thị field chọn PT
+          if (weekdaysSelectionWrapper) weekdaysSelectionWrapper.style.display = "block"; // Hiển thị field chọn thứ
+          updateDurationMonthsHelp();
+        } else if (packageType === "PER_VISIT") {
+          // Gói theo lượt: Tự động set 60 ngày
+          durationWrapper.style.display = "block";
+          sessionsWrapper.style.display = "block";
+          durationInput.value = 60;
+          durationInput.readOnly = true;
+          durationHelp.style.display = "block";
+        }
+      }
+
+      function updateDurationMonthsHelp() {
+        const sessionsInput = document.getElementById("numberOfSessions");
+        const helpText = document.getElementById("durationMonthsHelp");
+        const durationMonthsSelect = document.getElementById("durationMonths");
+        
+        if (!sessionsInput || !helpText || !durationMonthsSelect) return;
+        
+        const sessions = parseInt(sessionsInput.value) || 0;
+        let helpMessage = "";
+        let validOptions = [];
+        
+        if (sessions === 30) {
+          helpMessage = "Gói 30 buổi: Chọn 1 hoặc 2 tháng";
+          validOptions = [1, 2];
+        } else if (sessions === 60) {
+          helpMessage = "Gói 60 buổi: Chọn 2 hoặc 3 tháng";
+          validOptions = [2, 3];
+        } else if (sessions > 0 && sessions < 30) {
+          helpMessage = "Gói dưới 30 buổi: Nên chọn 1 tháng";
+          validOptions = [1, 2, 3];
+        } else if (sessions > 60) {
+          helpMessage = "Gói trên 60 buổi: Nên chọn ít nhất 2 tháng";
+          validOptions = [2, 3, 4, 5, 6];
+        } else {
+          helpMessage = "Nhập số buổi để xem gợi ý số tháng";
+          validOptions = [1, 2, 3, 4, 5, 6];
+        }
+        
+        helpText.textContent = helpMessage;
+        
+        // Highlight valid options (optional - có thể thêm CSS class)
+        Array.from(durationMonthsSelect.options).forEach(option => {
+          if (option.value && validOptions.length > 0) {
+            const value = parseInt(option.value);
+            if (validOptions.includes(value)) {
+              option.style.fontWeight = "bold";
+            } else {
+              option.style.fontWeight = "normal";
             }
+          }
+        });
+      }
+
+      // Cập nhật hidden field allowedWeekdays khi checkbox thay đổi
+      function updateAllowedWeekdays() {
+        const checkboxes = document.querySelectorAll('.weekday-checkbox:checked');
+        const values = Array.from(checkboxes).map(cb => cb.value);
+        const hiddenInput = document.getElementById('allowedWeekdays');
+        if (hiddenInput) {
+          hiddenInput.value = values.join(',');
+        }
+      }
+
+      // Load lại các checkbox từ allowedWeekdays (khi edit)
+      function loadWeekdaysFromValue() {
+        const hiddenInput = document.getElementById('allowedWeekdays');
+        if (hiddenInput && hiddenInput.value) {
+          const weekdays = hiddenInput.value.split(',').map(w => w.trim());
+          weekdays.forEach(day => {
+            const checkbox = document.getElementById('weekday-' + day.toLowerCase());
+            if (checkbox) {
+              checkbox.checked = true;
+            }
+          });
+        }
+      }
+
+      // Chạy khi tải trang (để xử lý form edit)
+      document.addEventListener("DOMContentLoaded", function() {
+        togglePackageFields();
+        loadWeekdaysFromValue();
+        
+        // Thêm event listener cho numberOfSessions để cập nhật help text
+        const sessionsInput = document.getElementById("numberOfSessions");
+        if (sessionsInput) {
+          sessionsInput.addEventListener("input", updateDurationMonthsHelp);
+          sessionsInput.addEventListener("change", updateDurationMonthsHelp);
         }
 
-        // Chạy khi tải trang (để xử lý form edit)
-        document.addEventListener('DOMContentLoaded', togglePackageFields);
-        // Chạy khi thay đổi dropdown
-        document.getElementById('packageTypeSelect').addEventListener('change', togglePackageFields);
+        // Thêm event listener cho các checkbox thứ
+        document.querySelectorAll('.weekday-checkbox').forEach(checkbox => {
+          checkbox.addEventListener('change', updateAllowedWeekdays);
+        });
+      });
+      
+      // Chạy khi thay đổi dropdown
+      document
+        .getElementById("packageTypeSelect")
+        .addEventListener("change", togglePackageFields);
+
+      (function () {
+        const input = document.getElementById("packageImageInput");
+        const img = document.getElementById("packageImagePreview");
+        const ph = document.getElementById("packageImagePlaceholder");
+        let currentUrl = null;
+        if (input) {
+          input.addEventListener("change", function () {
+            if (this.files && this.files[0]) {
+              if (currentUrl) {
+                try {
+                  URL.revokeObjectURL(currentUrl);
+                } catch (e) {}
+              }
+              currentUrl = URL.createObjectURL(this.files[0]);
+              img.src = currentUrl;
+              img.style.display = "block";
+              if (ph) ph.style.display = "none";
+            }
+          });
+        }
+        if (
+          img &&
+          img.getAttribute("src") &&
+          img.getAttribute("src").length > 0
+        ) {
+          img.style.display = "block";
+          if (ph) ph.style.display = "none";
+        }
+      })();
     </script>
-
-</div>
-
+  </div>
 </html>

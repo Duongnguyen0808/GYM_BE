@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+  <div th:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2 class="mb-0">Quản lý Lịch</h2>
+      <div>
+        <a th:href="@{/pt/dashboard}" class="btn btn-outline-secondary">← Về Dashboard</a>
+      </div>
+    </div>
+
+    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+
+    <!-- Navigation tuần -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Lịch Tuần</h5>
+        <div>
+          <th:block th:with="prevWeek=${weekStart.minusDays(7)}, nextWeek=${weekStart.plusDays(7)}">
+            <a th:href="@{/pt/schedule(weekStart=${#temporals.format(prevWeek, 'yyyy-MM-dd')})}" class="btn btn-sm btn-light me-2">← Tuần trước</a>
+            <a th:href="@{/pt/schedule(weekStart=${#temporals.format(nextWeek, 'yyyy-MM-dd')})}" class="btn btn-sm btn-light">Tuần sau →</a>
+          </th:block>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th>Khung giờ</th>
+                <th th:each="i : ${#numbers.sequence(0, 6)}">
+                  <div th:with="date=${weekStart.plusDays(i)}, dayOfWeek=${date.getDayOfWeek().getValue()}">
+                    <div class="fw-bold" th:text="${dayOfWeek == 1 ? 'Thứ 2' : (dayOfWeek == 2 ? 'Thứ 3' : (dayOfWeek == 3 ? 'Thứ 4' : (dayOfWeek == 4 ? 'Thứ 5' : (dayOfWeek == 5 ? 'Thứ 6' : (dayOfWeek == 6 ? 'Thứ 7' : 'CN')))))}">Thứ</div>
+                    <div class="small text-muted" th:text="${date.getDayOfMonth() + '/' + date.getMonthValue()}">Ngày</div>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr th:each="slot : ${weeklySchedule.timeSlots}">
+                <td class="fw-bold" th:text="${slot.displayName + ' (' + slot.startTime + ' - ' + slot.endTime + ')'}">Time Slot</td>
+                <td th:each="i : ${#numbers.sequence(0, 6)}">
+                  <th:block th:with="date=${weekStart.plusDays(i)}, dateKey=${#temporals.format(weekStart.plusDays(i), 'yyyy-MM-dd')}, slotKey=${slot.name()}, scheduleMap=${weeklySchedule.schedules}, bookingsMap=${weeklySchedule.bookings}">
+                    <div class="d-flex flex-column gap-1" style="min-height: 120px;">
+                      <!-- Học viên đã đăng ký (hiển thị tất cả học viên có gói PT với timeSlot này) -->
+                      <th:block th:if="${bookingsMap != null and bookingsMap.containsKey(dateKey)}">
+                        <th:block th:with="dayBookings=${bookingsMap.get(dateKey)}">
+                          <th:block th:if="${dayBookings != null and dayBookings.containsKey(slotKey)}">
+                            <th:block th:with="slotStudents=${dayBookings.get(slotKey)}">
+                              <th:block th:if="${slotStudents != null and !slotStudents.isEmpty()}">
+                                <th:block th:each="student : ${slotStudents}">
+                                  <div class="mb-2 p-2 border rounded" style="background-color: #e7f3ff; border-color: #b3d9ff !important;">
+                                    <div class="fw-bold text-primary mb-1" style="font-size: 0.9rem;" th:text="${student.memberName}">Tên học viên</div>
+                                    <div class="d-flex align-items-center gap-1 flex-wrap">
+                                      <span th:if="${student.hasAttendance}" class="badge bg-success" style="font-size: 0.75rem;">✓ Đã đi tập</span>
+                                      <span th:unless="${student.hasAttendance}" class="badge bg-warning" style="font-size: 0.75rem;">Chưa đi tập</span>
+                                      <span th:if="${student.remainingSessions != null}" class="badge bg-info" style="font-size: 0.75rem;" th:text="'Còn ' + ${student.remainingSessions} + ' buổi'">Còn X buổi</span>
+                                    </div>
+                                  </div>
+                                </th:block>
+                              </th:block>
+                            </th:block>
+                          </th:block>
+                        </th:block>
+                      </th:block>
+                      
+                      <!-- Schedule status -->
+                      <th:block th:if="${scheduleMap != null and scheduleMap.containsKey(dateKey)}">
+                        <th:block th:with="daySchedule=${scheduleMap.get(dateKey)}">
+                          <th:block th:if="${daySchedule != null and daySchedule.containsKey(slotKey)}">
+                            <th:block th:with="schedule=${daySchedule.get(slotKey)}">
+                              <span th:if="${schedule != null and schedule.isAvailable}" class="badge bg-success mb-2">Có thể nhận</span>
+                              <span th:if="${schedule != null and !schedule.isAvailable}" class="badge bg-danger mb-2">Không nhận</span>
+                            </th:block>
+                          </th:block>
+                        </th:block>
+                      </th:block>
+                      
+                      <!-- Toggle button -->
+                      <th:block th:with="hasSchedule=${scheduleMap != null and scheduleMap.containsKey(dateKey) and scheduleMap.get(dateKey) != null and scheduleMap.get(dateKey).containsKey(slotKey) and scheduleMap.get(dateKey).get(slotKey) != null}, currentSchedule=${(scheduleMap != null and scheduleMap.containsKey(dateKey) and scheduleMap.get(dateKey) != null and scheduleMap.get(dateKey).containsKey(slotKey)) ? scheduleMap.get(dateKey).get(slotKey) : null}">
+                        <button class="btn btn-sm btn-outline-primary toggle-btn"
+                                th:data-date="${dateKey}"
+                                th:data-slot="${slotKey}"
+                                th:data-available="${hasSchedule ? (!currentSchedule.isAvailable) : true}">
+                          <span th:if="${hasSchedule}">Đổi trạng thái</span>
+                          <span th:unless="${hasSchedule}">Đặt có thể nhận</span>
+                        </button>
+                      </th:block>
+                    </div>
+                  </th:block>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form để set availability (ẩn, dùng JavaScript) -->
+    <form id="scheduleForm" th:action="@{/pt/schedule/set-availability}" method="post" style="display: none;">
+      <input type="hidden" name="scheduleDate" id="scheduleDate">
+      <input type="hidden" name="timeSlot" id="timeSlot">
+      <input type="hidden" name="isAvailable" id="isAvailable">
+      <input type="hidden" name="weekStart" th:value="${weekStart}">
+    </form>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.toggle-btn').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            const dateKey = this.getAttribute('data-date');
+            const timeSlot = this.getAttribute('data-slot');
+            const isAvailable = this.getAttribute('data-available') === 'true';
+            
+            document.getElementById('scheduleDate').value = dateKey;
+            document.getElementById('timeSlot').value = timeSlot;
+            document.getElementById('isAvailable').value = isAvailable;
+            document.getElementById('scheduleForm').submit();
+          });
+        });
+      });
+    </script>
+  </div>
+</html>
+

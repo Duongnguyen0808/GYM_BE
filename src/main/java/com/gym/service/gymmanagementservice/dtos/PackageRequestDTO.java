@@ -6,6 +6,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -36,9 +37,20 @@ public class PackageRequestDTO {
     @Min(value = 1, message = "Thời hạn phải ít nhất là 1 ngày")
     private Integer durationDays;
 
+    @Schema(description = "Thời hạn của gói PT (số tháng). Bắt buộc cho PT_SESSION", example = "1")
+    @Min(value = 1, message = "Thời hạn phải ít nhất là 1 tháng")
+    private Integer durationMonths;
+
     @Schema(description = "Số buổi (hoặc số lượt). Bắt buộc cho PT_SESSION và PER_VISIT", example = "10")
     @Min(value = 1, message = "Số buổi/lượt phải ít nhất là 1")
     private Integer numberOfSessions;
+
+    @Schema(description = "Số buổi/tuần (tuỳ chọn)", example = "3")
+    @Min(value = 1, message = "Số buổi/tuần phải ít nhất là 1")
+    private Integer sessionsPerWeek;
+
+    @Schema(description = "Không giới hạn lượt/buổi", example = "false")
+    private Boolean unlimited;
 
     @Schema(description = "Giờ check-in sớm nhất (định dạng HH:mm)", example = "09:00")
     @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
@@ -47,4 +59,13 @@ public class PackageRequestDTO {
     @Schema(description = "Giờ check-in trễ nhất (định dạng HH:mm)", example = "16:00")
     @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
     private LocalTime endTimeLimit;
+
+    @JsonProperty("hinh_anh")
+    private String imageUrl;
+
+    @Schema(description = "ID của PT được gán cho gói (chỉ dùng cho PT_SESSION)", example = "1")
+    private Long assignedPtId;
+
+    @Schema(description = "Các thứ trong tuần cho phép tập, định dạng CSV: MON,WED,FRI (chỉ dùng cho PT_SESSION)", example = "MON,WED,FRI")
+    private String allowedWeekdays;
 }

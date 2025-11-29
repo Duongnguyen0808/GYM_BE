@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<div th:fragment="content">
+
+    <h2 class="mb-4" th:text="${pageTitle}">Sửa Ưu đãi/Khuyến mại</h2>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form th:action="@{/admin/promotions/edit/{id}(id=${promotion.id})}" method="post">
+                <div class="mb-3">
+                    <label class="form-label">Tên ưu đãi</label>
+                    <input type="text" name="name" class="form-control" th:value="${promotion.name}" required>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Áp dụng cho</label>
+                            <select name="targetType" id="promotionTargetType" class="form-select" required>
+                                <option value="PACKAGE" th:selected="${promotion.targetType.name() == 'PACKAGE'}">Gói tập</option>
+                                <option value="PRODUCT" th:selected="${promotion.targetType.name() == 'PRODUCT'}">Sản phẩm</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Giảm (%)</label>
+                            <input type="number" step="0.01" min="0" max="100" name="discountPercent" class="form-control" th:value="${promotion.discountPercent}" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3" id="promotionPackageSelect" th:style="${promotion.targetType.name() == 'PACKAGE'} ? 'display:block' : 'display:none'">
+                    <label class="form-label">Chọn Gói tập</label>
+                    <select class="form-select" name="targetId" id="packageDropdown" th:disabled="${promotion.targetType.name() != 'PACKAGE'}">
+                        <option value="">-- Chọn gói --</option>
+                        <option th:each="pkg : ${packages}" th:value="${pkg.id}" th:text="${pkg.name}" th:selected="${promotion.targetType.name() == 'PACKAGE' and promotion.targetId == pkg.id}"></option>
+                    </select>
+                </div>
+
+                <div class="mb-3" id="promotionProductSelect" th:style="${promotion.targetType.name() == 'PRODUCT'} ? 'display:block' : 'display:none'">
+                    <label class="form-label">Chọn Sản phẩm</label>
+                    <select class="form-select" name="targetId" id="productDropdown" th:disabled="${promotion.targetType.name() != 'PRODUCT'}">
+                        <option value="">-- Chọn sản phẩm --</option>
+                        <option th:each="prod : ${products}" th:value="${prod.id}" th:text="${prod.name}" th:selected="${promotion.targetType.name() == 'PRODUCT' and promotion.targetId == prod.id}"></option>
+                    </select>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Bắt đầu</label>
+                            <input type="datetime-local" name="start" class="form-control" th:value="${#temporals.format(promotion.startAt.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'yyyy-MM-dd''T''HH:mm')}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Kết thúc</label>
+                            <input type="datetime-local" name="end" class="form-control" th:value="${#temporals.format(promotion.endAt.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'yyyy-MM-dd''T''HH:mm')}" required>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Lưu</button>
+                <a th:href="@{/admin/promotions}" class="btn btn-secondary">Hủy</a>
+            </form>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        const typeSelect = document.getElementById('promotionTargetType');
+        const pkgSel = document.getElementById('promotionPackageSelect');
+        const prodSel = document.getElementById('promotionProductSelect');
+        const pkgDropdown = document.getElementById('packageDropdown');
+        const prodDropdown = document.getElementById('productDropdown');
+        
+        if (typeSelect) {
+            typeSelect.addEventListener('change', function(){
+                const v = typeSelect.value;
+                if (v === 'PACKAGE') { 
+                    pkgSel.style.display='block'; 
+                    prodSel.style.display='none'; 
+                    pkgDropdown.disabled = false;
+                    prodDropdown.disabled = true;
+                } else { 
+                    pkgSel.style.display='none'; 
+                    prodSel.style.display='block'; 
+                    pkgDropdown.disabled = true;
+                    prodDropdown.disabled = false;
+                }
+            });
+        }
+    </script>
+
+</div>
+
+</html>

@@ -38,6 +38,25 @@ public class MemberController {
         return ResponseEntity.ok(memberService.getAllMembers());
     }
 
+    @GetMapping("/search")
+    @Operation(summary = "Tìm kiếm hội viên theo tên, SĐT hoặc Barcode")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<List<MemberResponseDTO>> searchMembers(@RequestParam(required = false) String q) {
+        if (q == null || q.trim().isEmpty()) {
+            return ResponseEntity.ok(memberService.getAllMembers());
+        }
+        String searchTerm = q.toLowerCase();
+        List<MemberResponseDTO> results = memberService.getAllMembers().stream()
+            .filter(m -> 
+                m.getFullName().toLowerCase().contains(searchTerm) ||
+                (m.getPhoneNumber() != null && m.getPhoneNumber().contains(q)) ||
+                (m.getBarcode() != null && m.getBarcode().contains(q))
+            )
+            .limit(20) // Giới hạn 20 kết quả
+            .toList();
+        return ResponseEntity.ok(results);
+    }
+
     // Endpoint để lấy chi tiết một hội viên
     @GetMapping("/{memberId}")
     @Operation(summary = "Lấy thông tin chi tiết một hội viên bằng ID")

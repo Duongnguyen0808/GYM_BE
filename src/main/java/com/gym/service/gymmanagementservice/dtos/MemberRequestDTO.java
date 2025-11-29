@@ -20,4 +20,8 @@ public class MemberRequestDTO {
     private String email;
     private LocalDate birthDate;
     private String address;
+    
+    @Schema(description = "Mật khẩu (tùy chọn, nếu không có sẽ dùng SĐT làm mật khẩu mặc định)")
+    @Size(min = 6, message = "Mật khẩu phải có ít nhất 6 ký tự")
+    private String password;
 }

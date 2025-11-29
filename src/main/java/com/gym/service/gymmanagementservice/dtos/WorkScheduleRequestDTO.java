@@ -4,7 +4,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-import java.time.OffsetDateTime;
+import org.springframework.format.annotation.DateTimeFormat;
+import java.time.LocalDateTime;
 
 @Data
 @Schema(description = "Đối tượng yêu cầu để tạo/cập nhật lịch làm việc")
@@ -13,13 +14,15 @@ public class WorkScheduleRequestDTO {
     @NotNull(message = "ID nhân viên là bắt buộc")
     private Long userId;
 
-    @Schema(description = "Thời gian bắt đầu ca làm", example = "2025-10-20T08:00:00+07:00")
+    @Schema(description = "Thời gian bắt đầu buổi/lớp", example = "2025-10-20T08:00")
     @NotNull(message = "Thời gian bắt đầu là bắt buộc")
-    private OffsetDateTime startTime;
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+    private LocalDateTime startTime;
 
-    @Schema(description = "Thời gian kết thúc ca làm", example = "2025-10-20T17:00:00+07:00")
+    @Schema(description = "Thời gian kết thúc buổi/lớp", example = "2025-10-20T17:00")
     @NotNull(message = "Thời gian kết thúc là bắt buộc")
-    private OffsetDateTime endTime;
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+    private LocalDateTime endTime;
 
     @Schema(description = "Ghi chú cho ca làm", example = "Ca sáng chính")
     private String notes;

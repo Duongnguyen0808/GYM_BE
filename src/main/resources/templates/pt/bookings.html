@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+  <div th:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2 class="mb-0">Quản lý Booking</h2>
+      <div>
+        <a th:href="@{/pt/dashboard}" class="btn btn-outline-secondary">← Về Dashboard</a>
+      </div>
+    </div>
+
+    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+
+    <!-- Filter -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-body">
+        <form method="get" th:action="@{/pt/bookings}">
+          <div class="row">
+            <div class="col-md-4">
+              <label for="startDate" class="form-label">Từ ngày</label>
+              <input type="date" class="form-control" id="startDate" name="startDate" th:value="${startDate}">
+            </div>
+            <div class="col-md-4">
+              <label for="endDate" class="form-label">Đến ngày</label>
+              <input type="date" class="form-control" id="endDate" name="endDate" th:value="${endDate}">
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+              <button type="submit" class="btn btn-primary me-2">Lọc</button>
+              <a th:href="@{/pt/bookings}" class="btn btn-outline-secondary">Reset</a>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Bảng booking -->
+    <div class="card shadow-sm">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Danh sách Booking</h5>
+      </div>
+      <div class="card-body">
+        <div th:if="${bookings == null or bookings.isEmpty()}" class="text-muted text-center py-4">
+          Chưa có booking nào
+        </div>
+        <div th:if="${bookings != null and !bookings.isEmpty()}" class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Ngày</th>
+                <th>Khung giờ</th>
+                <th>Học viên</th>
+                <th>Trạng thái</th>
+                <th>Ghi chú</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr th:each="booking : ${bookings}">
+                <td th:text="${#temporals.format(booking.bookingDate, 'dd/MM/yyyy')}">Ngày</td>
+                <td th:text="${booking.timeSlot.displayName}">Time Slot</td>
+                <td th:text="${booking.memberPackage.member.fullName}">Học viên</td>
+                <td>
+                  <span th:if="${booking.status.name() == 'PENDING'}" class="badge bg-warning">Chờ xác nhận</span>
+                  <span th:if="${booking.status.name() == 'CONFIRMED'}" class="badge bg-success">Đã xác nhận</span>
+                  <span th:if="${booking.status.name() == 'COMPLETED'}" class="badge bg-info">Đã hoàn thành</span>
+                  <span th:if="${booking.status.name() == 'CANCELLED'}" class="badge bg-danger">Đã hủy</span>
+                </td>
+                <td th:text="${booking.notes ?: '-'}">Ghi chú</td>
+                <td>
+                  <th:block th:if="${booking.status.name() == 'PENDING'}">
+                    <form th:action="@{/pt/bookings/{id}/confirm(id=${booking.id})}" method="post" class="d-inline">
+                      <button type="submit" class="btn btn-sm btn-success">Xác nhận</button>
+                    </form>
+                    <button class="btn btn-sm btn-danger" onclick="showCancelModal([[${booking.id}]])">Hủy</button>
+                  </th:block>
+                  <th:block th:if="${booking.status.name() == 'CONFIRMED'}">
+                    <form th:action="@{/pt/bookings/{id}/complete(id=${booking.id})}" method="post" class="d-inline">
+                      <button type="submit" class="btn btn-sm btn-info">Hoàn thành</button>
+                    </form>
+                    <button class="btn btn-sm btn-danger" onclick="showCancelModal([[${booking.id}]])">Hủy</button>
+                  </th:block>
+                  <th:block th:if="${booking.status.name() == 'COMPLETED' or booking.status.name() == 'CANCELLED'}">
+                    <span class="text-muted">-</span>
+                  </th:block>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal hủy booking -->
+    <div class="modal fade" id="cancelModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Hủy Booking</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <form id="cancelForm" method="post">
+            <div class="modal-body">
+              <div class="mb-3">
+                <label for="reason" class="form-label">Lý do hủy</label>
+                <textarea class="form-control" id="reason" name="reason" rows="3" required></textarea>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+              <button type="submit" class="btn btn-danger">Xác nhận hủy</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function showCancelModal(bookingId) {
+        document.getElementById('cancelForm').action = '/pt/bookings/' + bookingId + '/cancel';
+        new bootstrap.Modal(document.getElementById('cancelModal')).show();
+      }
+    </script>
+  </div>
+</html>
+
+
+
+
+
+

@@ -4,6 +4,11 @@ import com.gym.service.gymmanagementservice.dtos.AdminUpdateUserRequestDTO;
 import com.gym.service.gymmanagementservice.dtos.UserResponseDTO;
 import com.gym.service.gymmanagementservice.models.User;
 import com.gym.service.gymmanagementservice.repositories.UserRepository;
+import com.gym.service.gymmanagementservice.repositories.TransactionRepository;
+import com.gym.service.gymmanagementservice.repositories.SaleRepository;
+import com.gym.service.gymmanagementservice.repositories.MemberPackageRepository;
+import com.gym.service.gymmanagementservice.repositories.WorkScheduleRepository;
+import com.gym.service.gymmanagementservice.repositories.StaffAttendanceRepository;
 import jakarta.persistence.EntityNotFoundException; // <-- IMPORT MỚI
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,6 +22,11 @@ import java.util.stream.Collectors;
 public class StaffService {
 
     private final UserRepository userRepository;
+    private final TransactionRepository transactionRepository;
+    private final SaleRepository saleRepository;
+    private final MemberPackageRepository memberPackageRepository;
+    private final WorkScheduleRepository workScheduleRepository;
+    private final StaffAttendanceRepository staffAttendanceRepository;
 
     public List<UserResponseDTO> getAllUsers() {
         return userRepository.findAll().stream()
@@ -78,5 +88,27 @@ public class StaffService {
 
         user.setLocked(!user.isLocked()); // Đảo ngược trạng thái khóa
         userRepository.save(user);
+    }
+
+    @Transactional
+    public void deleteUserByAdmin(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy người dùng với ID: " + userId));
+
+        if (user.getRole() == com.gym.service.gymmanagementservice.models.Role.MEMBER) {
+            throw new IllegalArgumentException("Không được xóa tài khoản HỘI VIÊN từ đây.");
+        }
+
+        long txCount = transactionRepository.countByCreatedBy_Id(userId);
+        long saleCount = saleRepository.countByUser_Id(userId);
+        long ptAssignCount = memberPackageRepository.countByAssignedPt_Id(userId);
+        long scheduleCount = workScheduleRepository.countByUserId(userId);
+        long attendanceCount = staffAttendanceRepository.countByUser_Id(userId);
+
+        if (txCount > 0 || saleCount > 0 || ptAssignCount > 0 || scheduleCount > 0 || attendanceCount > 0) {
+            throw new IllegalStateException("Không thể xóa người dùng vì đang có dữ liệu liên kết.");
+        }
+
+        userRepository.delete(user);
     }
 }

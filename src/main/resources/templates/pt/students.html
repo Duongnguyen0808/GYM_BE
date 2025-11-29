@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+  <div th:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2 class="mb-0">Danh sách Học viên</h2>
+      <div>
+        <a th:href="@{/pt/dashboard}" class="btn btn-outline-secondary">← Về Dashboard</a>
+      </div>
+    </div>
+
+    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+
+    <!-- Thống kê -->
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title text-muted">Tổng học viên</h5>
+            <h2 class="text-primary" th:text="${stats.totalStudents}">0</h2>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title text-muted">Học viên đang theo</h5>
+            <h2 class="text-success" th:text="${stats.activeStudents}">0</h2>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title text-muted">Tổng buổi còn lại</h5>
+            <h2 class="text-info" th:text="${stats.totalRemainingSessions}">0</h2>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bảng danh sách học viên -->
+    <div class="card shadow-sm">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Danh sách Học viên</h5>
+      </div>
+      <div class="card-body">
+        <div th:if="${students == null or students.isEmpty()}" class="text-muted text-center py-4">
+          Chưa có học viên nào
+        </div>
+        <div th:if="${students != null and !students.isEmpty()}" class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Họ tên</th>
+                <th>Số điện thoại</th>
+                <th>Gói tập</th>
+                <th>Khung giờ</th>
+                <th>Các thứ</th>
+                <th>Buổi còn lại</th>
+                <th>Ngày hết hạn</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr th:each="student : ${students}">
+                <td th:text="${student.memberName}">Tên</td>
+                <td th:text="${student.phoneNumber}">SĐT</td>
+                <td>
+                  <span class="badge bg-primary" th:text="${student.packageName}">Gói</span>
+                </td>
+                <td th:text="${student.timeSlotDisplay}">Time Slot</td>
+                <td>
+                  <th:block th:if="${student.allowedWeekdaysDisplay != null and student.allowedWeekdaysDisplay != '-'}">
+                    <div class="d-flex flex-wrap gap-1">
+                      <span th:each="day,iterStat : ${#strings.arraySplit(student.allowedWeekdaysDisplay, ', ')}">
+                        <span class="badge bg-info text-white" style="font-size: 0.75rem; padding: 0.35em 0.65em;" th:text="${day.trim()}">Thứ</span>
+                      </span>
+                    </div>
+                  </th:block>
+                  <span th:if="${student.allowedWeekdaysDisplay == null or student.allowedWeekdaysDisplay == '-'}" class="text-muted">-</span>
+                </td>
+                <td>
+                  <span class="badge bg-warning" th:text="${student.remainingSessions}">0</span>
+                </td>
+                <td th:text="${student.endDate != null ? #temporals.format(student.endDate, 'dd/MM/yyyy') : '-'}">Ngày</td>
+                <td>
+                  <a th:href="@{/pt/students/{id}(id=${student.packageId})}" class="btn btn-sm btn-primary">Chi tiết</a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</html>
+
+

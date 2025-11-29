@@ -1,73 +1,262 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{fragments/layout :: layout(~{::content}, 'Quản lý Gói tập')}">
-
-<div th:fragment="content">
-
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+  <div th:fragment="content">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">Quản lý Gói tập (Dịch vụ)</h2>
-        <a th:href="@{/admin/packages/create}" class="btn btn-primary">Tạo gói tập mới</a>
+      <h2 class="mb-0">Quản lý Gói tập (Dịch vụ)</h2>
+      <a th:href="@{/admin/packages/create}" class="btn btn-primary"
+        >Tạo gói tập mới</a
+      >
     </div>
 
-    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
-    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+    <div
+      th:if="${successMessage}"
+      class="alert alert-success"
+      th:text="${successMessage}"
+    ></div>
+    <div
+      th:if="${errorMessage}"
+      class="alert alert-danger"
+      th:text="${errorMessage}"
+    ></div>
 
     <div class="card shadow-sm">
-        <div class="card-body">
+      <div class="card-body">
+        <form class="row g-3 mb-3" method="get" th:action="@{/admin/packages}">
+          <div class="col-md-6">
+            <input
+              type="text"
+              class="form-control"
+              name="q"
+              th:value="${q}"
+              placeholder="Tìm theo tên gói"
+            />
+          </div>
+          <div class="col-md-4">
+            <select class="form-select" name="type">
+              <option
+                value=""
+                th:selected="${type == null or #strings.isEmpty(type)}"
+              >
+                Tất cả loại
+              </option>
+              <option
+                th:each="pt : ${allPackageTypes}"
+                th:value="${pt.name()}"
+                th:text="${pt.name() == 'GYM_ACCESS' ? 'Gói thời hạn' : (pt.name() == 'PT_SESSION' ? 'Gói PT' : (pt.name() == 'PER_VISIT' ? 'Gói theo lượt' : pt.name()))}"
+                th:selected="${type != null ? pt.name().equalsIgnoreCase(type) : false}"
+              ></option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <select class="form-select" name="active">
+              <option value="" th:selected="${active == null}">
+                Trạng thái
+              </option>
+              <option
+                th:value="true"
+                th:selected="${active != null and active}"
+              >
+                Đang bán
+              </option>
+              <option
+                th:value="false"
+                th:selected="${active != null and !active}"
+              >
+                Ngừng
+              </option>
+            </select>
+          </div>
+          <div class="col-md-auto d-flex justify-content-end align-items-start">
+            <button type="submit" class="btn btn-outline-primary me-2">
+              Lọc
+            </button>
+            <a th:href="@{/admin/packages}" class="btn btn-outline-secondary"
+              >Xóa lọc</a
+            >
+          </div>
+        </form>
 
-            <table class="table table-hover align-middle">
-                <thead class="table-light">
-                <tr>
-                    <th scope="col">ID</th>
-                    <th scope="col">Tên Gói tập</th>
-                    <th scope="col">Loại gói</th>
-                    <th scope="col">Giá (VNĐ)</th>
-                    <th scope="col">Chi tiết</th>
-                    <th scope="col">Khung giờ (Off-Peak)</th>
-                    <th scope="col">Trạng thái</th>
-                    <th scope="col" class="text-end">Hành động</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="pkg : ${packages}">
-                    <th scope="row" th:text="${pkg.id}">1</th>
-                    <td th:text="${pkg.name}">Gói 1 tháng</td>
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th scope="col">Hình ảnh</th>
+              <th scope="col">Tên Gói tập</th>
+              <th scope="col">Loại gói</th>
+              <th scope="col">Giá (VNĐ)</th>
+              <th scope="col">Chi tiết</th>
+              <th scope="col">Khung giờ</th>
+              <th scope="col">Đang tham gia</th>
+              <th scope="col">Trạng thái</th>
+              <th scope="col" class="text-end">Hành động</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="pkg : ${packages}">
+              <td>
+                <div
+                  style="
+                    width: 60px;
+                    height: 60px;
+                    border-radius: 6px;
+                    overflow: hidden;
+                    background: #f1f3f5;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                  "
+                >
+                  <img
+                    th:if="${pkg.imageUrl}"
+                    th:src="${pkg.imageUrl}"
+                    alt="Ảnh"
+                    style="max-width: 100%; max-height: 100%; object-fit: cover"
+                  />
+                  <span
+                    th:if="${pkg.imageUrl == null}"
+                    class="text-muted"
+                    style="font-size: 0.8rem"
+                    >Chưa có ảnh</span
+                  >
+                </div>
+              </td>
+              <td>
+                <div>
+                  <div th:text="${pkg.name}">Gói 1 tháng</div>
+                  <div th:if="${packagePromotions != null and packagePromotions.containsKey(pkg.id)}" class="mt-1">
+                    <span class="badge bg-danger" th:text="${packagePromotions.get(pkg.id).name + ' -' + #numbers.formatDecimal(packagePromotions.get(pkg.id).discountPercent, 0, 'COMMA', 0, 'POINT') + '%'}"></span>
+                  </div>
+                </div>
+              </td>
 
-                    <td>
-                        <span th:if="${pkg.packageType.name() == 'GYM_ACCESS'}" class="badge bg-primary">Gym Access</span>
-                        <span th:if="${pkg.packageType.name() == 'PT_SESSION'}" class="badge bg-info text-dark">PT Session</span>
-                        <span th:if="${pkg.packageType.name() == 'PER_VISIT'}" class="badge bg-secondary">Per-Visit</span>
-                    </td>
+              <td>
+                <span
+                  th:if="${pkg.packageType.name() == 'GYM_ACCESS'}"
+                  class="badge bg-primary"
+                  >Gói thời hạn</span
+                >
+                <span
+                  th:if="${pkg.packageType.name() == 'PT_SESSION'}"
+                  class="badge bg-info text-dark"
+                  >Gói PT</span
+                >
+                <span
+                  th:if="${pkg.packageType.name() == 'PER_VISIT'}"
+                  class="badge bg-secondary"
+                  >Gói theo lượt</span
+                >
+              </td>
 
-                    <td th:text="${#numbers.formatDecimal(pkg.price, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">500,000 VNĐ</td>
-                    <td>
-                        <span th:if="${pkg.durationDays != null}" th:text="${pkg.durationDays} + ' ngày'">30 ngày</span>
-                        <span th:if="${pkg.numberOfSessions != null}" th:text="${pkg.numberOfSessions} + ' buổi/lượt'">10 buổi/lượt</span>
-                    </td>
-                    <td>
-                            <span th:if="${pkg.startTimeLimit != null}"
-                                  th:text="${pkg.startTimeLimit} + ' - ' + ${pkg.endTimeLimit}">09:00 - 16:00</span>
-                        <span th:if="${pkg.startTimeLimit == null}" class="text-muted">Mọi lúc</span>
-                    </td>
-                    <td>
-                        <span th:if="${pkg.isActive}" class="badge bg-success">Đang bán</span>
-                        <span th:if="${!pkg.isActive}" class="badge bg-danger">Ngừng bán</span>
-                    </td>
+              <td>
+                <div th:if="${packageDiscountedPrices == null or !packageDiscountedPrices.containsKey(pkg.id)}">
+                  <span th:text="${#numbers.formatDecimal(pkg.price, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span>
+                </div>
+                <div th:if="${packageDiscountedPrices != null and packageDiscountedPrices.containsKey(pkg.id)}">
+                  <div class="text-decoration-line-through text-muted small mb-1" th:text="${#numbers.formatDecimal(pkg.price, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></div>
+                  <div>
+                    <span class="text-danger fw-bold" th:text="${#numbers.formatDecimal(packageDiscountedPrices.get(pkg.id), 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <!-- Gói thời hạn (GYM_ACCESS) -->
+                <div th:if="${pkg.packageType.name() == 'GYM_ACCESS'}" style="line-height: 1.4;">
+                  <div th:if="${pkg.durationMonths != null and pkg.durationMonths > 0}" 
+                       class="fw-bold">
+                    <span th:text="${pkg.durationMonths == 12 ? '12 tháng (1 năm)' : 
+                                  (pkg.durationMonths == 24 ? '24 tháng (2 năm)' : 
+                                  pkg.durationMonths + ' tháng')}">3 tháng</span>
+                  </div>
+                  <!-- Backward compatibility: hiển thị durationDays nếu không có durationMonths -->
+                  <span th:if="${(pkg.durationMonths == null or pkg.durationMonths == 0) and pkg.durationDays != null}"
+                        th:text="${pkg.durationDays} + ' ngày'">30 ngày</span>
+                  <span th:if="${(pkg.durationMonths == null or pkg.durationMonths == 0) and pkg.durationDays == null}"
+                        class="text-muted">-</span>
+                </div>
+                <!-- Gói PT (PT_SESSION) -->
+                <div th:if="${pkg.packageType.name() == 'PT_SESSION'}" style="line-height: 1.4;">
+                  <div th:if="${pkg.numberOfSessions != null}" 
+                       class="fw-bold" 
+                       th:text="${pkg.numberOfSessions} + ' buổi'">30 buổi</div>
+                  <div th:if="${pkg.durationMonths != null and pkg.durationMonths > 0}" 
+                       class="small text-muted mt-1" 
+                       th:text="${pkg.durationMonths} + ' tháng'">1 tháng</div>
+                  <span th:if="${pkg.numberOfSessions == null and (pkg.durationMonths == null or pkg.durationMonths == 0)}" 
+                        class="text-muted">-</span>
+                </div>
+                <!-- Gói theo lượt (PER_VISIT) -->
+                <div th:if="${pkg.packageType.name() == 'PER_VISIT'}">
+                  <div th:if="${pkg.durationDays != null}" 
+                       th:text="${pkg.durationDays} + ' ngày'">60 ngày</div>
+                  <div th:if="${pkg.numberOfSessions != null}" 
+                       class="small text-muted mt-1" 
+                       th:text="${pkg.numberOfSessions} + ' buổi/lượt'">10 buổi/lượt</div>
+                </div>
+              </td>
+              <td>
+                <span
+                  th:if="${pkg.startTimeLimit != null}"
+                  th:text="${pkg.startTimeLimit} + ' - ' + pkg.endTimeLimit"
+                  >09:00 - 16:00</span
+                >
+                <span th:if="${pkg.startTimeLimit == null}" class="text-muted"
+                  >Mọi lúc</span
+                >
+              </td>
+              <td th:text="${pkg.activeMemberCount}">0</td>
+              <td>
+                <span th:if="${pkg.isActive}" class="badge bg-success"
+                  >Đang bán</span
+                >
+                <span th:if="${!pkg.isActive}" class="badge bg-danger"
+                  >Ngừng bán</span
+                >
+              </td>
 
-                    <td class="text-end">
-                        <a th:href="@{/admin/packages/edit/{id}(id=${pkg.id})}" class="btn btn-sm btn-outline-primary">Sửa</a>
+              <td class="text-end">
+                <a
+                  th:href="@{/admin/packages/edit/{id}(id=${pkg.id})}"
+                  class="btn btn-sm btn-outline-primary"
+                  >Sửa</a
+                >
 
-                        <form th:action="@{/admin/packages/toggle/{id}(id=${pkg.id})}" method="post" class="d-inline ms-1">
-                            <button th:if="${pkg.isActive}" type="submit" class="btn btn-sm btn-outline-warning">Ngừng</button>
-                            <button th:if="${!pkg.isActive}" type="submit" class="btn btn-sm btn-outline-success">Mở bán</button>
-                        </form>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-
-        </div>
+                <form
+                  th:action="@{/admin/packages/toggle/{id}(id=${pkg.id})}"
+                  method="post"
+                  class="d-inline ms-1"
+                >
+                  <button
+                    th:if="${pkg.isActive}"
+                    type="submit"
+                    class="btn btn-sm btn-outline-warning"
+                  >
+                    Ngừng
+                  </button>
+                  <button
+                    th:if="${!pkg.isActive}"
+                    type="submit"
+                    class="btn btn-sm btn-outline-success"
+                  >
+                    Mở bán
+                  </button>
+                </form>
+                <form
+                  th:action="@{/admin/packages/delete/{id}(id=${pkg.id})}"
+                  method="post"
+                  class="d-inline ms-1"
+                >
+                  <button
+                    type="submit"
+                    class="btn btn-sm btn-outline-danger"
+                    onclick="return confirm('Xóa gói này? Hệ thống sẽ từ chối nếu có ràng buộc.')"
+                  >
+                    Xóa
+                  </button>
+                </form>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-</div>
-
+  </div>
 </html>

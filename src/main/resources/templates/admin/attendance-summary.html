@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+  <div th:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2 class="mb-0">Chấm công & Tổng hợp giờ công</h2>
+      <div>
+        <form th:action="@{/admin/attendance/checkin}" method="post" class="d-inline">
+          <button type="submit" class="btn btn-outline-success">Check-in</button>
+        </form>
+        <form th:action="@{/admin/attendance/checkout}" method="post" class="d-inline ms-2">
+          <button type="submit" class="btn btn-outline-danger">Check-out</button>
+        </form>
+      </div>
+    </div>
+
+    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <form th:action="@{/admin/attendance}" method="get" class="row g-2 align-items-end">
+          <div class="col-md-4">
+            <label class="form-label">Nhân viên</label>
+            <select class="form-select" name="userId" th:value="${userId}">
+              <option value="">Tất cả</option>
+              <option th:each="u : ${allUsers}" th:value="${u.id}" th:text="${u.fullName}"></option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Từ ngày</label>
+            <input type="date" class="form-control" name="start" th:value="${start}" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Đến ngày</label>
+            <input type="date" class="form-control" name="end" th:value="${end}" />
+          </div>
+          <div class="col-md-2">
+            <button type="submit" class="btn btn-outline-primary w-100">Lọc</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="mb-0">Tổng hợp</h5>
+          <span class="badge bg-primary" th:text="'Tổng giờ: ' + ${totalHours} + ' h'"></span>
+        </div>
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Nhân viên</th>
+              <th>Check-in</th>
+              <th>Check-out</th>
+              <th class="text-end">Số giờ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="r : ${records}">
+              <td th:text="${r.user.fullName}">Tên</td>
+              <td th:text="${#temporals.format(r.checkInTime.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'dd/MM/yyyy HH:mm')}">-</td>
+              <td th:text="${r.checkOutTime != null ? #temporals.format(r.checkOutTime.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'dd/MM/yyyy HH:mm') : '-'}">-</td>
+              <td class="text-end" th:text="${r.durationSeconds != null ? T(java.lang.Math).round(r.durationSeconds / 3600.0 * 100) / 100.0 : 0}">0</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</html>

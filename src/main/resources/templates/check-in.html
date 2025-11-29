@@ -1,84 +1,238 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{fragments/layout :: layout(~{::content}, 'Check-in Hội viên')}">
-
-<div th:fragment="content">
-
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+  <div th:fragment="content">
     <div class="row justify-content-center">
-        <div class="col-lg-8 col-xl-6">
-
-            <h2 class="mb-4 text-center">Check-in Hội viên</h2>
-
-            <div th:if="${checkInSuccess != null and checkInSuccess}" class="card shadow-sm border-success mb-4">
-                <div class="card-body p-4 text-center">
-                    <h1 class="display-3 text-success">✔️</h1>
-                    <h3 class="card-title text-success" th:text="${checkInResponse.message}">Check-in thành công!</h3>
-                    <hr>
-                    <div class="text-start">
-                        <p class="mb-1"><strong>Hội viên:</strong> <span th:text="${checkInResponse.memberFullName}"></span></p>
-                        <p class="mb-1"><strong>Gói tập:</strong> <span th:text="${checkInResponse.packageName}"></span></p>
-                        <p class="mb-1" th:if="${checkInResponse.packageEndDate != null}">
-                            <strong>Hạn dùng:</strong>
-                            <span th:text="${#temporals.format(checkInResponse.packageEndDate.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'dd/MM/yyyy HH:mm')}"></span>
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <div th:if="${checkInError != null and checkInError}" class="card shadow-sm border-danger mb-4">
-                <div class="card-body p-4 text-center">
-                    <h1 class="display-3 text-danger">❌</h1>
-                    <h3 class="card-title text-danger" th:text="${checkInResponse.message}">Không tìm thấy hội viên!</h3>
-                    <hr>
-                    <p class="mb-1" th:if="${checkInResponse.memberFullName != null}">
-                        <strong>Hội viên:</strong> <span th:text="${checkInResponse.memberFullName}"></span>
-                    </p>
-                    <p class="mb-1" th:if="${checkInResponse.packageName != null}">
-                        <strong>Gói tập (Nếu có):</strong> <span th:text="${checkInResponse.packageName}"></span>
-                    </p>
-                </div>
-            </div>
-
-
-            <div class="card shadow-sm">
-                <div class="card-body p-4">
-                    <form th:action="@{/check-in}" th:object="${checkInRequest}" method="post">
-
-                        <div class="mb-3">
-                            <label for="barcode" class="form-label fs-5">Quét mã QR hoặc Nhập Số điện thoại</label>
-                            <input type="text" th:field="*{barcode}" id="barcode" class="form-control form-control-lg"
-                                   th:classappend="${#fields.hasErrors('barcode')} ? 'is-invalid' : ''"
-                                   autofocus
-                                   autocomplete="off">
-                            <div th:if="${#fields.hasErrors('barcode')}" th:errors="*{barcode}" class="invalid-feedback"></div>
-                        </div>
-
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">Check-in</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
+      <div class="col-lg-8 col-xl-6">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h2 class="mb-0">Check-in Hội viên</h2>
+          <a th:href="@{/check-in/logs}" class="btn btn-outline-secondary"
+            >Xem nhật ký</a
+          >
         </div>
+
+        <div
+          th:if="${checkInSuccess != null and checkInSuccess}"
+          class="card shadow-sm border-success mb-4"
+        >
+          <div class="card-body p-4 text-center">
+            <h1 class="display-3 text-success">✔️</h1>
+            <h3
+              class="card-title text-success"
+              th:text="${checkInResponse.message}"
+            >
+              Check-in thành công!
+            </h3>
+            <hr />
+            <div class="text-start">
+              <p class="mb-1">
+                <strong>Hội viên:</strong>
+                <span th:text="${checkInResponse.memberFullName}"></span>
+              </p>
+              <p class="mb-1">
+                <strong>Gói tập:</strong>
+                <span th:text="${checkInResponse.packageName}"></span>
+              </p>
+              <p class="mb-1" th:if="${checkInResponse.packageEndDate != null}">
+                <strong>Hạn dùng:</strong>
+                <span
+                  th:text="${#temporals.format(checkInResponse.packageEndDate.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'dd/MM/yyyy HH:mm')}"
+                ></span>
+              </p>
+              <p
+                class="mb-1"
+                th:if="${checkInResponse.sessionDurationSeconds != null}"
+              >
+                <strong>Thời gian tập:</strong>
+                <span
+                  th:text="${(checkInResponse.sessionDurationSeconds / 60)} + ' phút'"
+                ></span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div
+          th:if="${checkInError != null and checkInError}"
+          class="card shadow-sm border-danger mb-4"
+        >
+          <div class="card-body p-4 text-center">
+            <h1 class="display-3 text-danger">❌</h1>
+            <h3
+              class="card-title text-danger"
+              th:text="${checkInResponse.message}"
+            >
+              Không tìm thấy hội viên!
+            </h3>
+            <hr />
+            <p class="mb-1" th:if="${checkInResponse.memberFullName != null}">
+              <strong>Hội viên:</strong>
+              <span th:text="${checkInResponse.memberFullName}"></span>
+            </p>
+            <p class="mb-1" th:if="${checkInResponse.packageName != null}">
+              <strong>Gói tập (Nếu có):</strong>
+              <span th:text="${checkInResponse.packageName}"></span>
+            </p>
+          </div>
+        </div>
+
+        <div class="card shadow-sm">
+          <div class="card-body p-4">
+            <form
+              th:action="@{/check-in}"
+              th:object="${checkInRequest}"
+              method="post"
+            >
+              <div class="mb-3">
+                <label for="barcode" class="form-label fs-5"
+                  >Quét mã QR hoặc Nhập Số điện thoại</label
+                >
+                <input
+                  type="text"
+                  th:field="*{barcode}"
+                  id="barcode"
+                  class="form-control form-control-lg"
+                  th:classappend="${#fields.hasErrors('barcode')} ? 'is-invalid' : ''"
+                  autofocus
+                  autocomplete="off"
+                />
+                <div
+                  th:if="${#fields.hasErrors('barcode')}"
+                  th:errors="*{barcode}"
+                  class="invalid-feedback"
+                ></div>
+              </div>
+
+              <div class="d-grid">
+                <button type="submit" class="btn btn-primary btn-lg">
+                  Check-in
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="card shadow-sm mt-4">
+          <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="mb-0">QR chung ngày <span id="qrDateLabel"></span></h5>
+              <button
+                id="btnRefreshQr"
+                type="button"
+                class="btn btn-outline-primary"
+              >
+                Làm mới QR
+              </button>
+            </div>
+            <div class="d-flex justify-content-center">
+              <img
+                id="qrTodayImg"
+                src=""
+                alt="QR hôm nay"
+                style="
+                  width: 512px;
+                  height: 512px;
+                  border: 1px solid #eee;
+                  border-radius: 8px;
+                "
+              />
+            </div>
+          </div>
+        </div>
+
+        <div
+          id="mobileResultCard"
+          class="card shadow-sm mt-3"
+          style="display: none"
+        >
+          <div class="card-body p-4 text-center">
+            <h3 id="mobileResultTitle" class="card-title">
+              Kết quả từ điện thoại
+            </h3>
+            <hr />
+            <div id="mobileResultDetails" class="text-start"></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script th:inline="javascript">
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('barcode').focus();
+      document.addEventListener("DOMContentLoaded", function () {
+        document.getElementById("barcode").focus();
 
-            /* SỬA LỖI 2 (Lỗi trong log):
+        /* SỬA LỖI 2 (Lỗi trong log):
               Đổi "checkInSuccess or checkInError"
               thành "checkInSuccess != null or checkInError != null"
             */
-            /*[# th:if="${checkInSuccess != null or checkInError != null}"]*/
-            setTimeout(function() {
-                // Tải lại trang để xóa thông báo và sẵn sàng cho lần quét tiếp theo
-                window.location.href = /*[[@{/check-in}]]*/ '/check-in';
-            }, 5000); // 5 giây
-            /*[/]*/
+        /*[# th:if="${checkInSuccess != null or checkInError != null}"]*/
+        setTimeout(function () {
+          // Tải lại trang để xóa thông báo và sẵn sàng cho lần quét tiếp theo
+          window.location.href = /*[[@{/check-in}]]*/ "/check-in";
+        }, 5000); // 5 giây
+        /*[/]*/
+        // QR chung hôm nay (không cần chọn hội viên)
+        const img = document.getElementById("qrTodayImg");
+        const refreshBtn = document.getElementById("btnRefreshQr");
+        const dateLabel = document.getElementById("qrDateLabel");
+        dateLabel.textContent = new Date().toLocaleDateString("vi-VN");
+        function loadGymQr() {
+          const url = `/api/members/qr/gym/image/today?t=` + Date.now();
+          img.src = "";
+          setTimeout(function () {
+            img.src = url;
+          }, 50);
+        }
+        loadGymQr();
+        refreshBtn.addEventListener("click", function () {
+          loadGymQr();
         });
-    </script>
-</div>
+        img.addEventListener("error", function () {
+          img.src = "";
+        });
 
+        const mobileCard = document.getElementById("mobileResultCard");
+        const mobileTitle = document.getElementById("mobileResultTitle");
+        const mobileDetails = document.getElementById("mobileResultDetails");
+        try {
+          const es = new EventSource("/api/check-in/events");
+          es.addEventListener("check-in", function (ev) {
+            const data = JSON.parse(ev.data);
+            mobileCard.style.display = "block";
+            if (data.status === "SUCCESS") {
+              mobileCard.classList.remove("border-danger");
+              mobileCard.classList.add("border-success");
+              mobileTitle.classList.remove("text-danger");
+              mobileTitle.classList.add("text-success");
+            } else {
+              mobileCard.classList.remove("border-success");
+              mobileCard.classList.add("border-danger");
+              mobileTitle.classList.remove("text-success");
+              mobileTitle.classList.add("text-danger");
+            }
+            mobileTitle.textContent = data.message || "Kết quả từ điện thoại";
+            let html = "";
+            if (data.memberFullName) {
+              html +=
+                '<p class="mb-1"><strong>Hội viên:</strong> ' +
+                data.memberFullName +
+                "</p>";
+            }
+            if (data.packageName) {
+              html +=
+                '<p class="mb-1"><strong>Gói tập:</strong> ' +
+                data.packageName +
+                "</p>";
+            }
+            if (data.sessionDurationSeconds) {
+              var mins = Math.floor(data.sessionDurationSeconds / 60);
+              html +=
+                '<p class="mb-1"><strong>Thời gian tập:</strong> ' +
+                mins +
+                " phút</p>";
+            }
+            mobileDetails.innerHTML = html;
+          });
+        } catch (e) {}
+      });
+    </script>
+  </div>
 </html>

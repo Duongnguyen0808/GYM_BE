@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{fragments/layout :: layout(~{::content}, ${pageTitle})}">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
 
 <div th:fragment="content">
 
@@ -36,33 +35,21 @@
                     </div>
                 </div>
 
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email (Tùy chọn)</label>
-                            <input type="email" th:field="*{email}" id="email" class="form-control"
-                                   th:classappend="${#fields.hasErrors('email')} ? 'is-invalid' : ''">
-                            <div th:if="${#fields.hasErrors('email')}" th:errors="*{email}" class="invalid-feedback"></div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Mật khẩu</label>
-                            <input type="password" th:field="*{password}" id="password" class="form-control"
-                                   th:classappend="${#fields.hasErrors('password')} ? 'is-invalid' : ''">
-                            <div th:if="${#fields.hasErrors('password')}" th:errors="*{password}" class="invalid-feedback"></div>
-                        </div>
-                    </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Mật khẩu</label>
+                    <input type="password" th:field="*{password}" id="password" class="form-control"
+                           th:classappend="${#fields.hasErrors('password')} ? 'is-invalid' : ''">
+                    <div th:if="${#fields.hasErrors('password')}" th:errors="*{password}" class="invalid-feedback"></div>
                 </div>
 
                 <div class="mb-3">
-                    <label for="role" class="form-label">Vai trò (Role)</label>
+                    <label for="role" class="form-label">Vai trò</label>
                     <select th:field="*{role}" id="role" class="form-select"
                             th:classappend="${#fields.hasErrors('role')} ? 'is-invalid' : ''">
                         <option value="">-- Chọn vai trò --</option>
                         <option th:each="roleValue : ${allRoles}"
                                 th:value="${roleValue}"
-                                th:text="${roleValue}">
+                                th:text="${roleValue == 'ADMIN' ? 'Quản trị viên' : (roleValue == 'STAFF' ? 'Nhân viên' : (roleValue == 'PT' ? 'Huấn luyện viên' : roleValue))}">
                         </option>
                     </select>
                     <div th:if="${#fields.hasErrors('role')}" th:errors="*{role}" class="invalid-feedback"></div>

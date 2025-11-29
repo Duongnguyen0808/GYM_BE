@@ -44,4 +44,14 @@ public class MemberPackage {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_pt_id")
     private User assignedPt; // PT được gán cho gói này
+
+    @Column(name = "cancellation_reason", columnDefinition = "TEXT")
+    private String cancellationReason;
+
+    @Column(name = "allowed_weekdays")
+    private String allowedWeekdays; // Ví dụ: "MON,WED,FRI"
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "time_slot")
+    private TimeSlot timeSlot; // Khung giờ đã chọn (chỉ dùng cho PT_SESSION)
 }

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: layout(~{::content})}">
+<head>
+    <title>Lịch sử Check-in/Check-out</title>
+</head>
+<body>
+    <div th:fragment="content">
+        <div class="container-fluid">
+            <h2 class="mb-4">Lịch sử Check-in/Check-out</h2>
+
+            <!-- Filter Form -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Bộ lọc</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" action="/admin/check-in-logs" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="memberId" class="form-label">Hội viên</label>
+                            <select class="form-select select2-search" id="memberId" name="memberId" style="width: 100%;">
+                                <option value="">-- Tất cả --</option>
+                                <option th:each="member : ${members}" 
+                                        th:value="${member.id}" 
+                                        th:text="${member.fullName + ' - ' + member.phoneNumber}"
+                                        th:selected="${memberId != null && memberId == member.id}">
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="startDate" class="form-label">Từ ngày</label>
+                            <input type="date" class="form-control" id="startDate" name="startDate" th:value="${startDate}">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="endDate" class="form-label">Đến ngày</label>
+                            <input type="date" class="form-control" id="endDate" name="endDate" th:value="${endDate}">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="size" class="form-label">Số bản ghi</label>
+                            <select class="form-select" id="size" name="size">
+                                <option value="20" th:selected="${size == 20}">20</option>
+                                <option value="50" th:selected="${size == 50}">50</option>
+                                <option value="100" th:selected="${size == 100}">100</option>
+                                <option value="200" th:selected="${size == 200}">200</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                Tìm kiếm
+                            </button>
+                            <a href="/admin/check-in-logs" class="btn btn-secondary">
+                                Làm mới
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Results Table -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Danh sách Check-in/Check-out</h5>
+                    <span class="badge bg-primary" th:text="${#lists.size(logs)} + ' bản ghi'"></span>
+                </div>
+                <div class="card-body">
+                    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+                    
+                    <div class="table-responsive">
+                        <style>
+                            .table-active-session {
+                                background-color: #e3f2fd !important; /* Màu xanh nhạt */
+                            }
+                            .table-active-session:hover {
+                                background-color: #bbdefb !important; /* Màu xanh nhạt đậm hơn khi hover */
+                            }
+                        </style>
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Hội viên</th>
+                                    <th>SĐT</th>
+                                    <th>Gói tập</th>
+                                    <th>Thời gian vào</th>
+                                    <th>Thời gian ra</th>
+                                    <th>Thời gian tập</th>
+                                    <th>Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:if="${#lists.isEmpty(logs)}">
+                                    <td colspan="7" class="text-center text-muted">
+                                        Không có dữ liệu
+                                    </td>
+                                </tr>
+                                <tr th:each="log, iterStat : ${logs}" th:class="${log.isCheckedOut ? '' : 'table-active-session'}">
+                                    <td>
+                                        <strong th:text="${log.memberFullName ?: 'N/A'}"></strong>
+                                    </td>
+                                    <td th:text="${log.memberPhone ?: 'N/A'}"></td>
+                                    <td>
+                                        <span th:if="${log.packageName}" 
+                                              th:text="${log.packageName}" 
+                                              class="badge bg-info"></span>
+                                        <span th:unless="${log.packageName}" class="text-muted">--</span>
+                                    </td>
+                                    <td>
+                                        <span th:if="${log.checkInTime}" 
+                                              th:text="${#temporals.format(log.checkInTime, 'dd/MM/yyyy HH:mm:ss')}"></span>
+                                        <span th:unless="${log.checkInTime}" class="text-muted">--</span>
+                                    </td>
+                                    <td>
+                                        <span th:if="${log.checkOutTime}" 
+                                              th:text="${#temporals.format(log.checkOutTime, 'dd/MM/yyyy HH:mm:ss')}"
+                                              class="text-success"></span>
+                                        <span th:unless="${log.checkOutTime}" class="text-warning">
+                                            Đang tập
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span th:if="${log.sessionDurationSeconds != null && log.sessionDurationSeconds > 0}">
+                                            <span th:if="${log.sessionDurationSeconds >= 3600}">
+                                                <span th:text="${log.sessionDurationSeconds / 3600}"></span> giờ
+                                                <span th:text="${(log.sessionDurationSeconds % 3600) / 60}"></span> phút
+                                            </span>
+                                            <span th:unless="${log.sessionDurationSeconds >= 3600}">
+                                                <span th:text="${log.sessionDurationSeconds / 60}"></span> phút
+                                            </span>
+                                        </span>
+                                        <span th:unless="${log.sessionDurationSeconds != null && log.sessionDurationSeconds > 0}" 
+                                              class="text-muted">--</span>
+                                    </td>
+                                    <td>
+                                        <!-- Logic: Nếu có check-in time và chưa check-out → Đang tập -->
+                                        <!-- Nếu đã check-out → Đã ra về -->
+                                        <!-- Nếu có lỗi (status != SUCCESS) → hiển thị lỗi -->
+                                        <span th:if="${log.checkInTime != null and log.checkOutTime == null and (log.status == null or log.status.name() == 'SUCCESS')}">
+                                            <span class="badge bg-warning">Đang tập</span>
+                                        </span>
+                                        <span th:if="${log.checkInTime != null and log.checkOutTime != null and (log.status == null or log.status.name() == 'SUCCESS')}">
+                                            <span class="badge bg-success">Đã ra về</span>
+                                        </span>
+                                        <!-- Hiển thị trạng thái lỗi nếu status != SUCCESS -->
+                                        <span th:if="${log.status != null and log.status.name() != 'SUCCESS'}">
+                                            <span th:switch="${log.status.name()}">
+                                                <span th:case="'FAILED_MEMBER_NOT_FOUND'" class="badge bg-danger">Không tìm thấy</span>
+                                                <span th:case="'FAILED_NO_ACTIVE_PACKAGE'" class="badge bg-warning">Không có gói</span>
+                                                <span th:case="'FAILED_OFF_PEAK_TIME'" class="badge bg-info">Ngoài giờ</span>
+                                                <span th:case="*" class="badge bg-secondary" th:text="${log.status.name()}"></span>
+                                            </span>
+                                        </span>
+                                        <!-- Trường hợp không có check-in time và không có lỗi -->
+                                        <span th:if="${log.checkInTime == null and (log.status == null or log.status.name() == 'SUCCESS')}">
+                                            <span class="badge bg-secondary">--</span>
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script th:inline="javascript">
+        // Initialize Select2 after page loads
+        $(document).ready(function() {
+            // Destroy existing Select2 if any
+            if ($('#memberId').hasClass('select2-hidden-accessible')) {
+                $('#memberId').select2('destroy');
+            }
+            
+            // Initialize Select2 for searchable member dropdown
+            $('#memberId').select2({
+                theme: 'bootstrap-5',
+                placeholder: 'Gõ tên hoặc SĐT để tìm kiếm...',
+                allowClear: true,
+                width: '100%',
+                minimumInputLength: 0,
+                language: {
+                    noResults: function() {
+                        return "Không tìm thấy hội viên";
+                    },
+                    searching: function() {
+                        return "Đang tìm kiếm...";
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+

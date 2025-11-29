@@ -1,81 +1,122 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{fragments/layout :: layout(~{::content}, ${pageTitle})}">
-
-<div th:fragment="content">
-
-    <h2 class="mb-4" th:text="${memberId != null} ? 'Cập nhật Hội viên' : 'Tạo Hội viên mới'"></h2>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+  <div th:fragment="content">
+    <h2
+      class="mb-4"
+      th:text="${memberId != null} ? 'Cập nhật Hội viên' : 'Tạo Hội viên mới'"
+    ></h2>
 
     <div class="card shadow-sm">
-        <div class="card-body">
+      <div class="card-body">
+        <form
+          th:action="${memberId != null} ? @{/members/edit/{id}(id=${memberId})} : @{/members/create}"
+          th:object="${memberRequest}"
+          method="post"
+          th:enctype="${memberId != null} ? 'multipart/form-data' : 'application/x-www-form-urlencoded'"
+        >
+          <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger">
+            <p th:each="err : ${#fields.globalErrors()}" th:text="${err}"></p>
+          </div>
 
-            <form th:action="${memberId != null} ? @{/members/edit/{id}(id=${memberId})} : @{/members/create}"
-                  th:object="${memberRequest}"
-                  method="post">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="fullName" class="form-label">Họ và Tên</label>
+                <input
+                  type="text"
+                  th:field="*{fullName}"
+                  id="fullName"
+                  class="form-control"
+                  th:classappend="${#fields.hasErrors('fullName')} ? 'is-invalid' : ''"
+                />
+                <div
+                  th:if="${#fields.hasErrors('fullName')}"
+                  th:errors="*{fullName}"
+                  class="invalid-feedback"
+                ></div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="phoneNumber" class="form-label"
+                  >Số điện thoại</label
+                >
+                <input
+                  type="text"
+                  th:field="*{phoneNumber}"
+                  id="phoneNumber"
+                  class="form-control"
+                  th:classappend="${#fields.hasErrors('phoneNumber')} ? 'is-invalid' : ''"
+                />
+                <div
+                  th:if="${#fields.hasErrors('phoneNumber')}"
+                  th:errors="*{phoneNumber}"
+                  class="invalid-feedback"
+                ></div>
+                <small class="form-text text-muted"
+                  >Dùng để đăng nhập và làm mã barcode (QR Code).</small
+                >
+              </div>
+            </div>
+          </div>
 
-                <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger">
-                    <p th:each="err : ${#fields.globalErrors()}" th:text="${err}"></p>
-                </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="birthDate" class="form-label"
+                  >Ngày sinh (Tùy chọn)</label
+                >
+                <input
+                  type="date"
+                  th:field="*{birthDate}"
+                  id="birthDate"
+                  class="form-control"
+                  th:classappend="${#fields.hasErrors('birthDate')} ? 'is-invalid' : ''"
+                />
+                <div
+                  th:if="${#fields.hasErrors('birthDate')}"
+                  th:errors="*{birthDate}"
+                  class="invalid-feedback"
+                ></div>
+              </div>
+            </div>
+          </div>
 
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="fullName" class="form-label">Họ và Tên</label>
-                            <input type="text" th:field="*{fullName}" id="fullName" class="form-control"
-                                   th:classappend="${#fields.hasErrors('fullName')} ? 'is-invalid' : ''">
-                            <div th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}" class="invalid-feedback"></div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="phoneNumber" class="form-label">Số điện thoại</label>
-                            <input type="text" th:field="*{phoneNumber}" id="phoneNumber" class="form-control"
-                                   th:classappend="${#fields.hasErrors('phoneNumber')} ? 'is-invalid' : ''">
-                            <div th:if="${#fields.hasErrors('phoneNumber')}" th:errors="*{phoneNumber}" class="invalid-feedback"></div>
-                            <small class="form-text text-muted">Dùng để đăng nhập và làm mã barcode (QR Code).</small>
-                        </div>
-                    </div>
-                </div>
+          <div class="mb-3">
+            <label for="address" class="form-label">Địa chỉ (Tùy chọn)</label>
+            <input
+              type="text"
+              th:field="*{address}"
+              id="address"
+              class="form-control"
+            />
+          </div>
 
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email (Tùy chọn)</label>
-                            <input type="email" th:field="*{email}" id="email" class="form-control"
-                                   th:classappend="${#fields.hasErrors('email')} ? 'is-invalid' : ''">
-                            <div th:if="${#fields.hasErrors('email')}" th:errors="*{email}" class="invalid-feedback"></div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="birthDate" class="form-label">Ngày sinh (Tùy chọn)</label>
-                            <input type="date" th:field="*{birthDate}" id="birthDate" class="form-control"
-                                   th:classappend="${#fields.hasErrors('birthDate')} ? 'is-invalid' : ''">
-                            <div th:if="${#fields.hasErrors('birthDate')}" th:errors="*{birthDate}" class="invalid-feedback"></div>
-                        </div>
-                    </div>
-                </div>
+          <div class="mb-3" th:if="${memberId == null}">
+            <label for="password" class="form-label">Mật khẩu (Tùy chọn)</label>
+            <input
+              type="password"
+              th:field="*{password}"
+              id="password"
+              class="form-control"
+              th:classappend="${#fields.hasErrors('password')} ? 'is-invalid' : ''"
+              placeholder="Nếu để trống, mật khẩu mặc định là SĐT"
+            />
+            <div
+              th:if="${#fields.hasErrors('password')}"
+              th:errors="*{password}"
+              class="invalid-feedback"
+            ></div>
+            <small class="form-text text-muted">Nếu không nhập, mật khẩu mặc định sẽ là số điện thoại.</small>
+          </div>
 
-                <div class="mb-3">
-                    <label for="address" class="form-label">Địa chỉ (Tùy chọn)</label>
-                    <input type="text" th:field="*{address}" id="address" class="form-control">
-                </div>
-
-                <hr>
-                <div class="alert alert-info">
-                    Tài khoản đăng nhập của hội viên sẽ được tạo tự động.
-                    <br>
-                    Mật khẩu mặc định chính là <strong>Số điện thoại</strong> của hội viên.
-                </div>
-
-                <button type="submit" class="btn btn-primary">
-                    <span th:if="${memberId != null}">Lưu thay đổi</span>
-                    <span th:if="${memberId == null}">Tạo hội viên</span>
-                </button>
-                <a th:href="@{/members}" class="btn btn-secondary">Hủy</a>
-            </form>
-        </div>
+          <button type="submit" class="btn btn-primary">
+            <span th:if="${memberId != null}">Lưu thay đổi</span>
+            <span th:if="${memberId == null}">Tạo hội viên</span>
+          </button>
+          <a th:href="@{/members}" class="btn btn-secondary">Hủy</a>
+        </form>
+      </div>
     </div>
-</div>
-
+  </div>
 </html>

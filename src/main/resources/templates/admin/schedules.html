@@ -1,55 +1,173 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{fragments/layout :: layout(~{::content}, 'Quản lý Lịch làm việc')}">
-
-<div th:fragment="content">
-
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+  <div th:fragment="content">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">Quản lý Lịch làm việc</h2>
-        <a th:href="@{/admin/schedules/create}" class="btn btn-primary">Xếp lịch mới</a>
+      <h2 class="mb-0">Quản lý Lịch tập PT</h2>
     </div>
 
     <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
     <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
 
-    <div class="card shadow-sm">
-        <div class="card-body">
-
-            <table class="table table-hover align-middle">
-                <thead class="table-light">
-                <tr>
-                    <th scope="col">ID</th>
-                    <th scope="col">Nhân viên</th>
-                    <th scope="col">Ngày</th>
-                    <th scope="col">Giờ bắt đầu</th>
-                    <th scope="col">Giờ kết thúc</th>
-                    <th scope="col">Ghi chú</th>
-                    <th scope="col" class="text-end">Hành động</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="sch : ${schedules}">
-                    <th scope="row" th:text="${sch.id}">1</th>
-                    <td th:text="${sch.userFullName}">Nguyễn Văn A</td>
-
-                    <td th:text="${#temporals.format(sch.startTime.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'dd/MM/yyyy')}">30/10/2025</td>
-                    <td th:text="${#temporals.format(sch.startTime.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'HH:mm')}">08:00</td>
-                    <td th:text="${#temporals.format(sch.endTime.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'HH:mm')}">17:00</td>
-
-                    <td th:text="${sch.notes}">Ca sáng</td>
-
-                    <td class="text-end">
-                        <form th:action="@{/admin/schedules/delete/{id}(id=${sch.id})}" method="post" class="d-inline">
-                            <button class="btn btn-sm btn-outline-danger"
-                            onclick="return confirm('Bạn có chắc muốn xóa lịch này?');">Xóa</button>
-                        </form>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-
+    <div class="row">
+      <!-- Cột bên trái: Danh sách PT -->
+      <div class="col-md-4">
+        <div class="card shadow-sm">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Danh sách Huấn luyện viên</h5>
+          </div>
+          <div class="list-group list-group-flush" style="max-height: 80vh; overflow-y: auto;">
+            <div th:if="${allPts == null or #lists.isEmpty(allPts)}" class="list-group-item text-muted text-center py-4">
+              Chưa có huấn luyện viên nào
+            </div>
+            <a
+              th:each="pt : ${allPts}"
+              th:href="@{/admin/schedules(ptId=${pt.id})}"
+              th:classappend="${selectedPtId != null and selectedPtId == pt.id} ? 'list-group-item-primary' : ''"
+              class="list-group-item list-group-item-action"
+              style="cursor: pointer; transition: all 0.2s;"
+              onmouseover="this.style.backgroundColor='#f8f9fa'"
+              onmouseout="this.style.backgroundColor=''"
+            >
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="flex-grow-1">
+                  <div class="fw-bold mb-1" th:text="${pt.fullName}">PT Name</div>
+                  <div class="small text-muted" th:text="${'📞 ' + pt.phoneNumber}">Phone</div>
+                </div>
+                <i
+                  th:if="${selectedPtId != null and selectedPtId == pt.id}"
+                  class="bi bi-check-circle-fill text-primary"
+                  style="font-size: 1.5rem;"
+                ></i>
+              </div>
+            </a>
+          </div>
         </div>
-    </div>
-</div>
+      </div>
 
+      <!-- Cột bên phải: Lịch tập của PT -->
+      <div class="col-md-8">
+        <div th:if="${selectedPt == null}" class="alert alert-info">
+          <strong>👈 Chọn một Huấn luyện viên</strong> từ danh sách bên trái để xem lịch tập
+        </div>
+
+        <div th:if="${selectedPt != null}">
+          <!-- Thông tin PT -->
+          <div class="card shadow-sm mb-3 border-0">
+            <div class="card-body bg-light rounded">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="card-title mb-0">
+                  Lịch tập của: <span class="text-primary fw-bold" th:text="${selectedPt.fullName}">PT</span>
+                </h5>
+                <div class="text-muted small">
+                  <i class="bi bi-telephone"></i> <span th:text="${selectedPt.phoneNumber}"></span>
+                </div>
+              </div>
+              <div class="row g-3 text-center">
+                <div class="col-md-4">
+                  <div class="bg-white border rounded p-3 shadow-sm">
+                    <h3 class="text-primary mb-1" th:text="${#lists.size(ptSessions)}">0</h3>
+                    <div class="small text-muted">Tổng buổi tập</div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="bg-white border rounded p-3 shadow-sm">
+                    <h3 class="text-success mb-1">
+                      <span
+                        th:text="${#sets.size(#sets.toSet(ptSessions.![memberPackage.member.id]))}"
+                        >0</span
+                      >
+                    </h3>
+                    <div class="small text-muted">Học viên</div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="bg-white border rounded p-3 shadow-sm">
+                    <h3 class="text-info mb-1">
+                      <span th:text="${#lists.size(ptSessions) > 7 ? 7 : #lists.size(ptSessions)}">0</span>
+                    </h3>
+                    <div class="small text-muted">7 buổi gần đây</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bảng lịch tập -->
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom">
+              <h5 class="mb-0 fw-bold">Chi tiết lịch tập</h5>
+            </div>
+            <div class="card-body p-0">
+              <div
+                th:if="${ptSessions == null or #lists.isEmpty(ptSessions)}"
+                class="alert alert-info m-3 text-center"
+              >
+                <i class="bi bi-info-circle me-2"></i>
+                Huấn luyện viên này chưa có buổi tập nào được ghi nhận.
+              </div>
+
+              <div th:if="${ptSessions != null and !#lists.isEmpty(ptSessions)}" class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th scope="col" style="width: 180px;">Thời gian</th>
+                      <th scope="col">Học viên</th>
+                      <th scope="col" style="width: 150px;">Gói tập</th>
+                      <th scope="col" style="width: 120px;">Buổi còn lại</th>
+                      <th scope="col">Ghi chú</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr th:each="session : ${ptSessions}">
+                      <td>
+                        <div class="small">
+                          <div class="fw-bold" th:text="${#temporals.format(session.sessionDate.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'dd/MM/yyyy')}"></div>
+                          <div class="text-muted" th:text="${#temporals.format(session.sessionDate.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'HH:mm')}"></div>
+                        </div>
+                      </td>
+                      <td>
+                        <div>
+                          <div class="fw-bold mb-1" th:text="${session.memberPackage.member.fullName}">Học viên</div>
+                          <div class="small text-muted" th:text="${'📞 ' + session.memberPackage.member.phoneNumber}"></div>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="badge bg-primary" th:text="${session.memberPackage.gymPackage.name}">Gói PT</span>
+                      </td>
+                      <td>
+                        <span
+                          th:if="${session.memberPackage.remainingSessions != null}"
+                          th:text="${session.memberPackage.remainingSessions + ' buổi'}"
+                          th:classappend="${session.memberPackage.remainingSessions <= 3 ? 'badge bg-danger' : 'badge bg-success'}"
+                          >0 buổi</span
+                        >
+                        <span
+                          th:if="${session.memberPackage.remainingSessions == null}"
+                          class="text-muted small"
+                          >-</span
+                        >
+                      </td>
+                      <td>
+                        <span
+                          th:if="${session.notes != null and !#strings.isEmpty(session.notes)}"
+                          th:text="${session.notes}"
+                          class="small text-muted"
+                          >Ghi chú</span
+                        >
+                        <span
+                          th:if="${session.notes == null or #strings.isEmpty(session.notes)}"
+                          class="text-muted small fst-italic"
+                          >Không có ghi chú</span
+                        >
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </html>

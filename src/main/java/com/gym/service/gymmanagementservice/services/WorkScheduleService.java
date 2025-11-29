@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -30,10 +31,14 @@ public class WorkScheduleService {
             throw new IllegalArgumentException("Thời gian bắt đầu không thể sau thời gian kết thúc.");
         }
 
+        ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
+        OffsetDateTime start = request.getStartTime().atZone(zone).toOffsetDateTime();
+        OffsetDateTime end = request.getEndTime().atZone(zone).toOffsetDateTime();
+
         WorkSchedule schedule = WorkSchedule.builder()
                 .user(user)
-                .startTime(request.getStartTime())
-                .endTime(request.getEndTime())
+                .startTime(start)
+                .endTime(end)
                 .notes(request.getNotes())
                 .build();
 
@@ -54,5 +59,22 @@ public class WorkScheduleService {
             throw new IllegalArgumentException("Không tìm thấy lịch làm việc với ID: " + scheduleId);
         }
         workScheduleRepository.deleteById(scheduleId);
+    }
+
+    @Transactional
+    public void copyWeek(java.time.LocalDate fromWeekStart, java.time.LocalDate toWeekStart) {
+        java.time.OffsetDateTime fromStart = fromWeekStart.atStartOfDay(ZoneId.of("Asia/Ho_Chi_Minh")).toOffsetDateTime();
+        java.time.OffsetDateTime fromEnd = fromStart.plusDays(7);
+        java.util.List<WorkSchedule> source = workScheduleRepository.findByStartTimeBetween(fromStart, fromEnd);
+        java.time.Duration delta = java.time.Duration.between(fromStart, toWeekStart.atStartOfDay(ZoneId.of("Asia/Ho_Chi_Minh")).toOffsetDateTime());
+        for (WorkSchedule ws : source) {
+            WorkSchedule clone = WorkSchedule.builder()
+                    .user(ws.getUser())
+                    .startTime(ws.getStartTime().plus(delta))
+                    .endTime(ws.getEndTime().plus(delta))
+                    .notes(ws.getNotes())
+                    .build();
+            workScheduleRepository.save(clone);
+        }
     }
 }

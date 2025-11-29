@@ -8,7 +8,6 @@ import org.springframework.data.domain.Sort; // <-- IMPORT MỚI
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,6 +30,20 @@ public class ReportService {
         );
 
         return transactions.stream()
+                .map(TransactionReportDTO::fromTransaction)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<TransactionReportDTO> getMemberTimeline(Long memberId) {
+        List<Transaction> transactions = transactionRepository.findAll(
+                Sort.by(Sort.Direction.DESC, "transactionDate")
+        );
+        return transactions.stream()
+                .filter(tx ->
+                        (tx.getMemberPackage() != null && tx.getMemberPackage().getMember() != null && tx.getMemberPackage().getMember().getId().equals(memberId))
+                                || (tx.getSale() != null && tx.getSale().getMember() != null && tx.getSale().getMember().getId().equals(memberId))
+                )
                 .map(TransactionReportDTO::fromTransaction)
                 .collect(Collectors.toList());
     }

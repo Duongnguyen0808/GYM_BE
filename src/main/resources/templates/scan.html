@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Quét QR - GYM</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f8f9fa; }
+        .card { max-width: 520px; margin: 24px auto; }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function(){
+            const params = new URLSearchParams(location.search);
+            const token = params.get('token');
+            const tokenEl = document.getElementById('token');
+            const phoneEl = document.getElementById('phone');
+            const btn = document.getElementById('btnSend');
+            const alertEl = document.getElementById('alert');
+
+            tokenEl.textContent = token ? token : '(không có)';
+
+            btn.addEventListener('click', async function(){
+                const phone = phoneEl.value.trim();
+                alertEl.className = 'alert alert-info';
+                alertEl.textContent = 'Đang gửi...';
+                alertEl.style.display = 'block';
+                try {
+                    const res = await fetch('/api/check-in/mobile', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: token, phone: phone })
+                    });
+                    const data = await res.json();
+                    if (data && data.status === 'SUCCESS') {
+                        alertEl.className = 'alert alert-success';
+                    } else {
+                        alertEl.className = 'alert alert-danger';
+                    }
+                    alertEl.textContent = data.message || 'Đã gửi kết quả lên quầy';
+                } catch (e) {
+                    alertEl.className = 'alert alert-danger';
+                    alertEl.textContent = 'Gửi thất bại. Vui lòng thử lại.';
+                }
+            });
+        });
+    </script>
+</head>
+<body>
+<div class="card shadow-sm">
+    <div class="card-body p-4">
+        <h5 class="mb-3">Xác nhận check-in</h5>
+        <p class="text-muted mb-2">Token QR:</p>
+        <code id="token" class="d-block mb-3"></code>
+        <div class="mb-3">
+            <label for="phone" class="form-label">Số điện thoại</label>
+            <input type="tel" class="form-control" id="phone" placeholder="Nhập SĐT của bạn">
+        </div>
+        <div class="d-grid">
+            <button id="btnSend" class="btn btn-primary">Gửi lên quầy</button>
+        </div>
+        <div id="alert" class="alert mt-3" style="display:none"></div>
+    </div>
+    <div class="card-footer text-muted text-center">
+        Sau khi gửi, kết quả sẽ hiển thị trên màn hình quầy.
+    </div>
+    </div>
+</body>
+</html>

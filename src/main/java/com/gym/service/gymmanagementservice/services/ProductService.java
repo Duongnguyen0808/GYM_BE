@@ -22,6 +22,7 @@ public class ProductService {
                 .price(request.getPrice())
                 .stockQuantity(request.getStockQuantity())
                 .isActive(true)
+                .hinhAnh(request.getImageUrl())
                 .build();
         return productRepository.save(product);
     }
@@ -45,6 +46,9 @@ public class ProductService {
         product.setName(request.getName());
         product.setPrice(request.getPrice());
         product.setStockQuantity(request.getStockQuantity());
+        if (request.getImageUrl() != null && !request.getImageUrl().isBlank()) {
+            product.setHinhAnh(request.getImageUrl());
+        }
 
         return productRepository.save(product);
     }

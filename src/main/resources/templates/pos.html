@@ -1,184 +1,287 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{fragments/layout :: layout(~{::content}, 'Bán hàng (POS)')}">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+  <div th:fragment="content">
+    <form
+      th:action="@{/pos}"
+      th:object="${saleRequest}"
+      method="post"
+      id="posForm"
+    >
+      <input
+        type="hidden"
+        th:name="${_csrf.parameterName}"
+        th:value="${_csrf.token}"
+      />
+      <div id="payMsg" style="display: none" class="alert"></div>
+      <div
+        th:if="${successMessage}"
+        class="alert alert-success"
+        th:text="${successMessage}"
+      ></div>
+      <div
+        th:if="${errorMessage}"
+        class="alert alert-danger"
+        th:text="${errorMessage}"
+      ></div>
 
-<div th:fragment="content">
+      <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger">
+        <p th:each="err : ${#fields.globalErrors()}" th:text="${err}"></p>
+      </div>
 
-    <form th:action="@{/pos}" th:object="${saleRequest}" method="post" id="posForm">
-
-        <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
-        <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
-
-        <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger">
-            <p th:each="err : ${#fields.globalErrors()}" th:text="${err}"></p>
+      <div class="row">
+        <div class="col-lg-5">
+          <div class="card shadow-sm">
+            <div class="card-header">
+              <h5>Sản phẩm (Nhấn để thêm)</h5>
+            </div>
+            <div class="card-body" style="max-height: 70vh; overflow-y: auto">
+              <div class="row g-3">
+                <div class="col-sm-6 col-lg-6 col-xxl-4" th:each="prod : ${products}">
+                  <div
+                    class="card h-100"
+                    th:data-id="${prod.id}"
+                    th:data-name="${prod.name}"
+                    th:data-price="${productDiscountedPrices != null and productDiscountedPrices.containsKey(prod.id) ? productDiscountedPrices.get(prod.id) : prod.price}"
+                    th:data-stock="${prod.stockQuantity}"
+                    onclick="addToCart(this.dataset.id, this.dataset.name, this.dataset.price, this.dataset.stock)"
+                    style="cursor: pointer"
+                  >
+                    <img
+                      th:if="${prod.hinhAnh}"
+                      th:src="${prod.hinhAnh}"
+                      alt="Ảnh"
+                      class="card-img-top"
+                      style="height: 120px; object-fit: cover"
+                    />
+                    <div
+                      th:if="${prod.hinhAnh == null}"
+                      class="card-img-top d-flex align-items-center justify-content-center text-muted"
+                      style="height: 120px; background: #f1f3f5"
+                    >
+                      Chưa có ảnh
+                    </div>
+                    <div class="card-body p-2 text-center">
+                      <h6
+                        class="card-title fs-6 mb-1"
+                        th:text="${prod.name}"
+                      ></h6>
+                      <div
+                        th:if="${productPromotions != null and productPromotions.containsKey(prod.id)}"
+                        class="mb-2"
+                      >
+                        <span
+                          class="badge bg-danger text-wrap w-100"
+                          style="white-space: normal"
+                          th:text="${productPromotions.get(prod.id).name + ' -' + #numbers.formatDecimal(productPromotions.get(prod.id).discountPercent, 0, 'COMMA', 0, 'POINT') + '%'}"
+                        ></span>
+                      </div>
+                      <p class="card-text text-muted small" th:if="${productDiscountedPrices == null or !productDiscountedPrices.containsKey(prod.id)}">
+                        <span th:text="${#numbers.formatDecimal(prod.price, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span>
+                      </p>
+                      <p class="card-text small" th:if="${productDiscountedPrices != null and productDiscountedPrices.containsKey(prod.id)}">
+                        <span class="text-decoration-line-through text-muted" th:text="${#numbers.formatDecimal(prod.price, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span>
+                        <br>
+                        <span class="text-danger fw-bold" th:text="${#numbers.formatDecimal(productDiscountedPrices.get(prod.id), 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span>
+                      </p>
+                      <small
+                        class="text-info"
+                        th:text="${'Tồn kho: ' + prod.stockQuantity}"
+                      ></small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="row">
-
-            <div class="col-lg-5">
-                <div class="card shadow-sm">
-                    <div class="card-header">
-                        <h5>Sản phẩm (Click để thêm)</h5>
-                    </div>
-                    <div class="card-body" style="max-height: 70vh; overflow-y: auto;">
-                        <div class="row g-2">
-                            <div class="col-md-6 col-lg-4" th:each="prod : ${products}">
-                                <div class="card h-100"
-                                     th:data-id="${prod.id}"
-                                     th:data-name="${prod.name}"
-                                     th:data-price="${prod.price}"
-                                     th:data-stock="${prod.stockQuantity}"
-                                     onclick="addToCart(this.dataset.id, this.dataset.name, this.dataset.price, this.dataset.stock)"
-                                     style="cursor: pointer;">
-                                    <div class="card-body p-2 text-center">
-                                        <h6 class="card-title fs-6 mb-1" th:text="${prod.name}"></h6>
-                                        <p class="card-text text-muted small" th:text="${#numbers.formatDecimal(prod.price, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></p>
-                                        <small class="text-info" th:text="'Tồn kho: ' + ${prod.stockQuantity}"></small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <div class="col-lg-7">
+          <div class="card shadow-sm">
+            <div class="card-header">
+              <h5>Hóa đơn thanh toán</h5>
             </div>
+            <div class="card-body">
+              <div class="mb-3 position-relative">
+                <label for="memberSearch" class="form-label"
+                  >Gán cho Hội viên (Gõ tên hoặc SĐT để tìm kiếm)</label
+                >
+                <input
+                  type="text"
+                  id="memberSearch"
+                  class="form-control"
+                  placeholder="Gõ tên hoặc SĐT để tìm kiếm hội viên..."
+                  autocomplete="off"
+                />
+                <input type="hidden" th:field="*{memberId}" id="memberId" />
+                <div
+                  id="memberDropdown"
+                  class="bg-white border rounded shadow"
+                  style="
+                    position: absolute;
+                    display: none;
+                    max-height: 300px;
+                    overflow-y: auto;
+                    z-index: 9999;
+                    width: 100%;
+                    top: 100%;
+                    left: 0;
+                    margin-top: 4px;
+                  "
+                ></div>
+                <small class="text-muted"
+                  ><i class="bi bi-info-circle"></i> Gõ tối thiểu 2 ký tự để tìm
+                  kiếm. Bỏ trống nếu là khách vãng lai.</small
+                >
+              </div>
 
-            <div class="col-lg-7">
-                <div class="card shadow-sm">
-                    <div class="card-header">
-                        <h5>Hóa đơn thanh toán</h5>
-                    </div>
-                    <div class="card-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Sản phẩm</th>
+                    <th style="width: 120px">Số lượng</th>
+                    <th>Đơn giá</th>
+                    <th class="text-end">Thành tiền</th>
+                  </tr>
+                </thead>
+                <tbody id="cart-table-body"></tbody>
+                <tfoot>
+                  <tr class="fw-bold fs-5">
+                    <td colspan="3">TỔNG CỘNG</td>
+                    <td class="text-end" id="cart-total">0 VNĐ</td>
+                  </tr>
+                </tfoot>
+              </table>
 
-                        <div class="mb-3">
-                            <label for="memberId" class="form-label">Gán cho Hội viên (Tùy chọn)</label>
-                            <select th:field="*{memberId}" id="memberId" class="form-select">
-                                <option value="">-- Chọn hội viên (Khách vãng lai) --</option>
-                                <option th:each="mem : ${members}"
-                                        th:value="${mem.id}"
-                                        th:text="${mem.fullName} + ' - ' + ${mem.phoneNumber}"></option>
-                            </select>
-                        </div>
+              <div id="cart-hidden-inputs"></div>
 
-                        <table class="table">
-                            <thead>
-                            <tr>
-                                <th>Sản phẩm</th>
-                                <th style="width: 120px;">Số lượng</th>
-                                <th>Đơn giá</th>
-                                <th class="text-end">Thành tiền</th>
-                            </tr>
-                            </thead>
-                            <tbody id="cart-table-body">
-                            </tbody>
-                            <tfoot>
-                            <tr class="fw-bold fs-5">
-                                <td colspan="3">TỔNG CỘNG</td>
-                                <td class="text-end" id="cart-total">0 VNĐ</td>
-                            </tr>
-                            </tfoot>
-                        </table>
-
-                        <div id="cart-hidden-inputs">
-                        </div>
-
-                        <div class="mt-4">
-                            <label class="form-label fw-bold">Hình thức thanh toán tại quầy:</label>
-                            <div class="d-flex gap-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" th:field="*{paymentMethod}" id="payCash" value="CASH" required>
-                                    <label class="form-check-label" for="payCash">Tiền mặt (CASH)</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" th:field="*{paymentMethod}" id="payCard" value="CREDIT_CARD" required>
-                                    <label class="form-check-label" for="payCard">Quẹt thẻ (CREDIT_CARD)</label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="d-grid mt-4">
-                            <button type="submit" class="btn btn-success btn-lg">THANH TOÁN</button>
-                        </div>
-
-                    </div>
+              <div class="mt-4">
+                <label class="form-label fw-bold"
+                  >Hình thức thanh toán tại quầy:</label
+                >
+                <div class="d-flex gap-3">
+                  <div class="form-check">
+                    <input
+                      class="form-check-input"
+                      type="radio"
+                      th:field="*{paymentMethod}"
+                      id="payCash"
+                      value="CASH"
+                      required
+                    />
+                    <label class="form-check-label" for="payCash"
+                      >💵 Tiền mặt</label
+                    >
+                  </div>
+                  <div class="form-check">
+                    <input
+                      class="form-check-input"
+                      type="radio"
+                      th:field="*{paymentMethod}"
+                      id="payVNPay"
+                      value="VN_PAY"
+                      required
+                    />
+                    <label class="form-check-label" for="payVNPay"
+                      >💳 VNPay (Online)</label
+                    >
+                  </div>
                 </div>
+              </div>
+
+              <div class="d-grid mt-4">
+                <button type="submit" class="btn btn-success btn-lg">
+                  THANH TOÁN
+                </button>
+              </div>
             </div>
+          </div>
         </div>
+      </div>
     </form>
 
     <script th:inline="javascript">
-        // Dùng Map để lưu giỏ hàng: (key: productId, value: {name, price, stock, quantity})
-        const cart = new Map();
+      // Dùng Map để lưu giỏ hàng: (key: productId, value: {name, price, stock, quantity})
+      const cart = new Map();
 
-        // Lấy các element DOM
-        const cartTableBody = document.getElementById('cart-table-body');
-        const cartTotalEl = document.getElementById('cart-total');
-        const cartHiddenInputs = document.getElementById('cart-hidden-inputs');
+      // Lấy các element DOM
+      const cartTableBody = document.getElementById("cart-table-body");
+      const cartTotalEl = document.getElementById("cart-total");
+      const cartHiddenInputs = document.getElementById("cart-hidden-inputs");
 
-        // Hàm Format tiền
-        const formatter = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
+      // Hàm Format tiền
+      const formatter = new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND",
+      });
 
-        function addToCart(id, name, price, stock) {
-            const numPrice = parseFloat(price);
-            const numStock = parseInt(stock);
+      function addToCart(id, name, price, stock) {
+        const numPrice = parseFloat(price);
+        const numStock = parseInt(stock);
 
-            if (cart.has(id)) {
-                // Tăng số lượng
-                const item = cart.get(id);
-                if (item.quantity < numStock) {
-                    item.quantity++;
-                } else {
-                    alert('Đã đạt số lượng tồn kho tối đa!');
-                }
-            } else {
-                // Thêm mới
-                if (numStock > 0) {
-                    cart.set(id, { name: name, price: numPrice, stock: numStock, quantity: 1 });
-                } else {
-                    alert('Sản phẩm đã hết hàng!');
-                }
-            }
-            renderCart();
+        if (cart.has(id)) {
+          // Tăng số lượng
+          const item = cart.get(id);
+          if (item.quantity < numStock) {
+            item.quantity++;
+          } else {
+            alert("Đã đạt số lượng tồn kho tối đa!");
+          }
+        } else {
+          // Thêm mới
+          if (numStock > 0) {
+            cart.set(id, {
+              name: name,
+              price: numPrice,
+              stock: numStock,
+              quantity: 1,
+            });
+          } else {
+            alert("Sản phẩm đã hết hàng!");
+          }
+        }
+        renderCart();
+      }
+
+      function changeQuantity(id, newQuantity) {
+        if (!cart.has(id)) return;
+
+        const item = cart.get(id);
+        const numQuantity = parseInt(newQuantity);
+
+        if (numQuantity <= 0) {
+          // Xóa khỏi giỏ hàng
+          cart.delete(id);
+        } else if (numQuantity > item.stock) {
+          alert("Số lượng vượt quá tồn kho!");
+          // Phục hồi giá trị cũ
+          renderCart();
+        } else {
+          // Cập nhật số lượng
+          item.quantity = numQuantity;
+        }
+        renderCart();
+      }
+
+      function renderCart() {
+        // Xóa nội dung cũ
+        cartTableBody.innerHTML = "";
+        cartHiddenInputs.innerHTML = "";
+
+        let total = 0;
+        let itemIndex = 0;
+
+        if (cart.size === 0) {
+          cartTableBody.innerHTML =
+            '<tr><td colspan="4" class="text-center text-muted">Giỏ hàng trống</td></tr>';
         }
 
-        function changeQuantity(id, newQuantity) {
-            if (!cart.has(id)) return;
+        for (const [id, item] of cart.entries()) {
+          const subtotal = item.price * item.quantity;
+          total += subtotal;
 
-            const item = cart.get(id);
-            const numQuantity = parseInt(newQuantity);
-
-            if (numQuantity <= 0) {
-                // Xóa khỏi giỏ hàng
-                cart.delete(id);
-            } else if (numQuantity > item.stock) {
-                alert('Số lượng vượt quá tồn kho!');
-                // Phục hồi giá trị cũ
-                renderCart();
-            } else {
-                // Cập nhật số lượng
-                item.quantity = numQuantity;
-            }
-            renderCart();
-        }
-
-        function renderCart() {
-            // Xóa nội dung cũ
-            cartTableBody.innerHTML = '';
-            cartHiddenInputs.innerHTML = '';
-
-            let total = 0;
-            let itemIndex = 0;
-
-            if (cart.size === 0) {
-                cartTableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Giỏ hàng trống</td></tr>';
-            }
-
-            for (const [id, item] of cart.entries()) {
-                const subtotal = item.price * item.quantity;
-                total += subtotal;
-
-                // 1. Cập nhật bảng hiển thị
-                const row = document.createElement('tr');
-                row.innerHTML = `
+          // 1. Cập nhật bảng hiển thị
+          const row = document.createElement("tr");
+          row.innerHTML = `
                     <td>${item.name}</td>
                     <td>
                         <input type="number" class="form-control form-control-sm"
@@ -190,29 +293,131 @@
                     <td>${formatter.format(item.price)}</td>
                     <td class="text-end">${formatter.format(subtotal)}</td>
                 `;
-                cartTableBody.appendChild(row);
+          cartTableBody.appendChild(row);
 
-                // 2. Cập nhật các input ẩn cho form submit
-                const inputId = document.createElement('input');
-                inputId.type = 'hidden';
-                inputId.name = `items[${itemIndex}].productId`;
-                inputId.value = id;
-                cartHiddenInputs.appendChild(inputId);
+          // 2. Cập nhật các input ẩn cho form submit
+          const inputId = document.createElement("input");
+          inputId.type = "hidden";
+          inputId.name = `items[${itemIndex}].productId`;
+          inputId.value = id;
+          cartHiddenInputs.appendChild(inputId);
 
-                const inputQty = document.createElement('input');
-                inputQty.type = 'hidden';
-                inputQty.name = `items[${itemIndex}].quantity`;
-                inputQty.value = item.quantity;
-                cartHiddenInputs.appendChild(inputQty);
+          const inputQty = document.createElement("input");
+          inputQty.type = "hidden";
+          inputQty.name = `items[${itemIndex}].quantity`;
+          inputQty.value = item.quantity;
+          cartHiddenInputs.appendChild(inputQty);
 
-                itemIndex++;
-            }
-
-            // Cập nhật tổng tiền
-            cartTotalEl.innerText = formatter.format(total);
+          itemIndex++;
         }
+
+        // Cập nhật tổng tiền
+        cartTotalEl.innerText = formatter.format(total);
+      }
+
+      (function () {
+        const p = new URLSearchParams(location.search);
+        const pay = p.get("pay");
+        const el = document.getElementById("payMsg");
+        if (pay === "success") {
+          el.className = "alert alert-success";
+          el.textContent = "Thanh toán VNPay thành công.";
+          el.style.display = "block";
+        }
+        if (pay === "canceled") {
+          el.className = "alert alert-warning";
+          el.textContent = "Bạn đã hủy thanh toán VNPay.";
+          el.style.display = "block";
+        }
+        if (pay === "failed") {
+          el.className = "alert alert-danger";
+          el.textContent = "Thanh toán VNPay thất bại.";
+          el.style.display = "block";
+        }
+      })();
+
+      document.addEventListener("DOMContentLoaded", function () {
+        let searchTimeout;
+        const searchInput = document.getElementById("memberSearch");
+        const memberIdInput = document.getElementById("memberId");
+        const dropdown = document.getElementById("memberDropdown");
+
+        function hideDropdown() {
+          dropdown.style.display = "none";
+        }
+        function showDropdown(html) {
+          dropdown.innerHTML = html;
+          dropdown.style.display = "block";
+        }
+
+        searchInput.addEventListener("input", function () {
+          const query = this.value.trim();
+          clearTimeout(searchTimeout);
+          if (query.length < 2) {
+            hideDropdown();
+            memberIdInput.value = "";
+            return;
+          }
+          searchTimeout = setTimeout(async () => {
+            showDropdown('<div class="p-2 text-info">Đang tìm kiếm...</div>');
+            try {
+              const res = await fetch(
+                `/api/members/search?q=${encodeURIComponent(query)}`
+              );
+              if (!res.ok) throw new Error("network");
+              const data = await res.json();
+              if (!Array.isArray(data) || data.length === 0) {
+                showDropdown(
+                  '<div class="p-2 text-muted">Không tìm thấy hội viên</div>'
+                );
+              } else {
+                let html = "";
+                data.forEach((member) => {
+                  const displayPhone =
+                    member.phoneNumber || member.barcode || "Chưa có SĐT";
+                  html += `<div class="member-item p-2 border-bottom" style="cursor: pointer;" data-id="${member.id}" data-name="${member.fullName}">
+                            <strong>${member.fullName}</strong><br/>
+                            <small class="text-muted">SĐT: ${displayPhone}</small>
+                          </div>`;
+                });
+                showDropdown(html);
+              }
+            } catch (e) {
+              showDropdown(
+                '<div class="p-2 text-danger">Lỗi khi tìm kiếm</div>'
+              );
+            }
+          }, 250);
+        });
+
+        dropdown.addEventListener("click", function (e) {
+          const item = e.target.closest(".member-item");
+          if (!item) return;
+          const id = item.getAttribute("data-id");
+          const name = item.getAttribute("data-name");
+          memberIdInput.value = id;
+          searchInput.value = name;
+          hideDropdown();
+        });
+
+        document.addEventListener("click", function (e) {
+          if (
+            !e.target.closest("#memberSearch") &&
+            !e.target.closest("#memberDropdown")
+          ) {
+            hideDropdown();
+          }
+        });
+
+        dropdown.addEventListener("mouseover", function (e) {
+          const item = e.target.closest(".member-item");
+          if (item) item.style.backgroundColor = "#f8f9fa";
+        });
+        dropdown.addEventListener("mouseout", function (e) {
+          const item = e.target.closest(".member-item");
+          if (item) item.style.backgroundColor = "white";
+        });
+      });
     </script>
-
-</div>
-
+  </div>
 </html>

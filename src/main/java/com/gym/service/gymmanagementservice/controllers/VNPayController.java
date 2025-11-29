@@ -1,18 +1,15 @@
 package com.gym.service.gymmanagementservice.controllers;
 
 import com.gym.service.gymmanagementservice.dtos.SubscriptionRequestDTO;
-import com.gym.service.gymmanagementservice.models.GymPackage; // Giữ lại import này
-import com.gym.service.gymmanagementservice.repositories.GymPackageRepository; // Giữ lại repo này
 import com.gym.service.gymmanagementservice.services.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter; // Thêm import này
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid; // Giữ lại import này
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize; // Giữ lại import này
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
 
@@ -25,7 +22,6 @@ import java.util.Map;
 public class VNPayController {
 
     private final PaymentService paymentService;
-    private final GymPackageRepository gymPackageRepository; // Vẫn cần cho thanh toán gói tập
 
     // Endpoint này được gọi từ Frontend để bắt đầu thanh toán GÓI TẬP
     @PostMapping("/create-subscription-payment")

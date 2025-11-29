@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +21,7 @@ public class SaleService {
     private final MemberRepository memberRepository;
     private final AuthenticationService authenticationService;
     private final TransactionRepository transactionRepository;
+    private final PromotionService promotionService;
 
     /**
      * MỚI: Hàm private để xử lý logic trừ tồn kho.
@@ -68,15 +68,22 @@ public class SaleService {
                 throw new IllegalStateException("Không đủ tồn kho cho sản phẩm: " + product.getName());
             }
 
+            java.time.OffsetDateTime now = java.time.OffsetDateTime.now();
+            java.math.BigDecimal unitPrice = product.getPrice();
+            var promoOpt = promotionService.getActivePromotionForProduct(product.getId(), now);
+            if (promoOpt.isPresent()) {
+                unitPrice = promotionService.applyDiscount(unitPrice, promoOpt.get());
+            }
+
             SaleDetail detail = SaleDetail.builder()
                     .sale(sale)
                     .product(product)
                     .quantity(item.getQuantity())
-                    .priceAtSale(product.getPrice())
+                    .priceAtSale(unitPrice)
                     .build();
 
             sale.getSaleDetails().add(detail);
-            totalAmount = totalAmount.add(product.getPrice().multiply(new BigDecimal(item.getQuantity())));
+            totalAmount = totalAmount.add(unitPrice.multiply(new BigDecimal(item.getQuantity())));
         }
 
         sale.setTotalAmount(totalAmount);
@@ -86,7 +93,7 @@ public class SaleService {
 
     /**
      * SỬA: Luồng 1 - Tạo hóa đơn bán tại quầy (POS)
-     * Giả định đã thanh toán (CASH, CREDIT_CARD tại quầy)
+     * Giả định đã thanh toán (CASH tại quầy hoặc VN_PAY online)
      */
     @Transactional
     public Sale createPosSale(SaleRequestDTO request) {
@@ -108,6 +115,7 @@ public class SaleService {
                 .amount(savedSale.getTotalAmount())
                 .paymentMethod(request.getPaymentMethod())
                 .status(TransactionStatus.COMPLETED)
+                .kind(TransactionKind.SALE)
                 .transactionDate(OffsetDateTime.now())
                 .createdBy(currentUser)
                 .sale(savedSale)

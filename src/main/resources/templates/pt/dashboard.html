@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+  <div th:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2 class="mb-0">Dashboard PT</h2>
+      <div>
+        <span class="text-muted">Xin chào, </span>
+        <strong th:text="${currentPt.fullName}">PT Name</strong>
+      </div>
+    </div>
+
+    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+
+    <!-- Thống kê tổng quan -->
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title text-muted">Học viên đang theo</h5>
+            <h2 class="text-primary" th:text="${stats.activeStudents}">0</h2>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title text-muted">Tổng buổi tập</h5>
+            <h2 class="text-success" th:text="${stats.totalSessions}">0</h2>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title text-muted">Buổi tập tháng này</h5>
+            <h2 class="text-info" th:text="${stats.sessionsThisMonth}">0</h2>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title text-muted">Tổng buổi còn lại</h5>
+            <h2 class="text-warning" th:text="${stats.totalRemainingSessions}">0</h2>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lịch theo tuần -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Lịch Tuần</h5>
+        <div>
+          <th:block th:with="prevWeek=${weekStart.minusDays(7)}, nextWeek=${weekStart.plusDays(7)}">
+            <a th:href="@{/pt/dashboard(weekStart=${#temporals.format(prevWeek, 'yyyy-MM-dd')})}" class="btn btn-sm btn-light me-2">← Tuần trước</a>
+            <a th:href="@{/pt/dashboard(weekStart=${#temporals.format(nextWeek, 'yyyy-MM-dd')})}" class="btn btn-sm btn-light">Tuần sau →</a>
+          </th:block>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th>Khung giờ</th>
+                <th th:each="i : ${#numbers.sequence(0, 6)}">
+                  <div th:with="date=${weekStart.plusDays(i)}, dayOfWeek=${date.getDayOfWeek().getValue()}">
+                    <div class="fw-bold" th:text="${dayOfWeek == 1 ? 'Thứ 2' : (dayOfWeek == 2 ? 'Thứ 3' : (dayOfWeek == 3 ? 'Thứ 4' : (dayOfWeek == 4 ? 'Thứ 5' : (dayOfWeek == 5 ? 'Thứ 6' : (dayOfWeek == 6 ? 'Thứ 7' : 'CN')))))}">Thứ</div>
+                    <div class="small text-muted" th:text="${date.getDayOfMonth() + '/' + date.getMonthValue()}">Ngày</div>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr th:each="slot : ${weeklySchedule.timeSlots}">
+                <td class="fw-bold" th:text="${slot.displayName + ' (' + slot.startTime + ' - ' + slot.endTime + ')'}">Khung giờ</td>
+                <td th:each="i : ${#numbers.sequence(0, 6)}">
+                  <th:block th:with="dateKey=${#temporals.format(weekStart.plusDays(i), 'yyyy-MM-dd')}, slotKey=${slot.name()}, bookingsMap=${weeklySchedule.bookings}">
+                    <div class="p-2" style="min-height: 110px;">
+                      <th:block th:if="${bookingsMap != null 
+                                        and bookingsMap.containsKey(dateKey)
+                                        and bookingsMap.get(dateKey) != null
+                                        and bookingsMap.get(dateKey).containsKey(slotKey)
+                                        and bookingsMap.get(dateKey).get(slotKey) != null
+                                        and !bookingsMap.get(dateKey).get(slotKey).isEmpty()}">
+                        <div class="d-flex flex-column gap-2">
+                          <div th:each="student : ${bookingsMap.get(dateKey).get(slotKey)}"
+                               class="rounded-3 px-2 py-2 text-white text-center"
+                               style="background-color: #1d72f3;">
+                            <div class="fw-semibold" th:text="${student.memberName}">Tên học viên</div>
+                            <div class="small"
+                                 th:text="'Còn ' + (${student.remainingSessionsDisplay} != null ? ${student.remainingSessionsDisplay} : 0) + ' buổi'">
+                              Còn X buổi
+                            </div>
+                          </div>
+                        </div>
+                      </th:block>
+                      <div th:if="${bookingsMap == null 
+                                    or !bookingsMap.containsKey(dateKey)
+                                    or bookingsMap.get(dateKey) == null
+                                    or !bookingsMap.get(dateKey).containsKey(slotKey)
+                                    or bookingsMap.get(dateKey).get(slotKey) == null
+                                    or bookingsMap.get(dateKey).get(slotKey).isEmpty()}"
+                           class="text-muted small text-center">
+                      </div>
+                    </div>
+                  </th:block>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</html>
+

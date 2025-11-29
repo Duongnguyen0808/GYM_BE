@@ -1,57 +1,274 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{fragments/layout :: layout(~{::content}, 'Báo cáo Doanh thu')}">
-
-<div th:fragment="content">
-
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+  <div th:fragment="content">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">Báo cáo Doanh thu</h2>
-        <button class="btn btn-outline-primary">Lọc theo ngày</button>
+      <h2 class="mb-0">Báo cáo Doanh thu</h2>
+      <form
+        th:action="@{/admin/reports/sales}"
+        method="get"
+        class="d-flex align-items-end gap-2"
+      >
+        <div>
+          <label class="form-label">Từ ngày</label>
+          <input
+            type="date"
+            class="form-control"
+            name="start"
+            th:value="${start}"
+          />
+        </div>
+        <div>
+          <label class="form-label">Đến ngày</label>
+          <input
+            type="date"
+            class="form-control"
+            name="end"
+            th:value="${end}"
+          />
+        </div>
+        <div>
+          <label class="form-label">Loại</label>
+          <select class="form-select" name="type">
+            <option value="ALL" th:selected="${type == null or type == 'ALL'}">
+              Tất cả
+            </option>
+            <option value="POS" th:selected="${type == 'POS'}">
+              Bán lẻ (POS)
+            </option>
+            <option
+              value="SUBSCRIPTION"
+              th:selected="${type == 'SUBSCRIPTION'}"
+            >
+              Gói tập
+            </option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Hình thức</label>
+          <select class="form-select" name="method">
+            <option value="" th:selected="${method == null}">Tất cả</option>
+            <option value="CASH" th:selected="${method?.name() == 'CASH'}">
+              💵 Tiền mặt
+            </option>
+            <option value="VN_PAY" th:selected="${method?.name() == 'VN_PAY'}">
+              💳 VNPay
+            </option>
+            <option
+              value="BANK_TRANSFER"
+              th:selected="${method?.name() == 'BANK_TRANSFER'}"
+            >
+              🏦 Chuyển khoản (Admin)
+            </option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Trạng thái</label>
+          <select class="form-select" name="status">
+            <option value="" th:selected="${status == null}">Tất cả</option>
+            <option
+              value="COMPLETED"
+              th:selected="${status?.name() == 'COMPLETED'}"
+            >
+              Đã thanh toán
+            </option>
+            <option
+              value="PENDING"
+              th:selected="${status?.name() == 'PENDING'}"
+            >
+              Chưa thanh toán
+            </option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-outline-primary">Lọc</button>
+      </form>
     </div>
 
-    <div class="alert alert-success fs-4">
-        <strong>Tổng doanh thu (Hoàn thành):</strong>
-        <span th:text="${#numbers.formatDecimal(totalRevenue, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span>
+    <div class="row mb-4">
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-body text-center">
+            <h5 class="text-muted mb-2">Tổng doanh thu (Hoàn thành)</h5>
+            <h2 class="text-success mb-0">
+              <span
+                th:text="${#numbers.formatDecimal(totalRevenue, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"
+              ></span>
+            </h2>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-body text-center">
+            <h5 class="text-muted mb-2">Tổng giao dịch</h5>
+            <h2 class="text-primary mb-0" th:text="${#lists.size(reportData)}">
+              0
+            </h2>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Biểu đồ thống kê -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-white">
+        <h5 class="mb-0">Biểu đồ Doanh thu</h5>
+      </div>
+      <div class="card-body">
+        <canvas id="revenueChart" height="80"></canvas>
+      </div>
     </div>
 
     <div class="card shadow-sm">
-        <div class="card-body">
+      <div class="card-body">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th scope="col">Thời gian</th>
+              <th scope="col">Loại giao dịch</th>
+              <th scope="col">Mô tả</th>
+              <th scope="col">Người mua</th>
+              <th scope="col">Nhân viên</th>
+              <th scope="col">Hình thức</th>
+              <th scope="col">Trạng thái</th>
+              <th scope="col" class="text-end">Số tiền (VNĐ)</th>
+              <th scope="col" class="text-end">Hành động</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="tx : ${reportData}">
+              <td
+                th:text="${#temporals.format(tx.transactionDate.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'dd/MM/yyyy HH:mm')}"
+              ></td>
+              <td th:text="${tx.transactionType}">Gói tập</td>
+              <td th:text="${tx.description}">Gói 1 tháng</td>
+              <td th:text="${tx.buyerName}">Khách vãng lai</td>
+              <td th:text="${tx.createdByStaffName}">Nhân viên A</td>
+              <td>
+                <span
+                  th:text="${tx.paymentMethod.name() == 'CASH' ? 'Tiền mặt' : 
+                                (tx.paymentMethod.name() == 'VN_PAY' ? 'VNPay' : 
+                                (tx.paymentMethod.name() == 'BANK_TRANSFER' ? 'Chuyển khoản' : tx.paymentMethod))}"
+                >
+                  CASH
+                </span>
+              </td>
 
-            <table class="table table-hover align-middle">
-                <thead class="table-light">
-                <tr>
-                    <th scope="col">ID Giao dịch</th>
-                    <th scope="col">Thời gian</th>
-                    <th scope="col">Loại Giao dịch</th>
-                    <th scope="col">Mô tả</th>
-                    <th scope="col">Nhân viên</th>
-                    <th scope="col">Hình thức</th>
-                    <th scope="col">Trạng thái</th>
-                    <th scope="col" class="text-end">Số tiền (VNĐ)</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="tx : ${reportData}">
-                    <th scope="row" th:text="${tx.id}">1001</th>
-                    <td th:text="${#temporals.format(tx.transactionDate.atZoneSameInstant(T(java.time.ZoneId).of('Asia/Ho_Chi_Minh')), 'dd/MM/yyyy HH:mm')}"></td>
-                    <td th:text="${tx.transactionType}">Gói tập</td>
-                    <td th:text="${tx.description}">Gói 1 tháng</td>
-                    <td th:text="${tx.createdByStaffName}">Nhân viên A</td>
-                    <td th:text="${tx.paymentMethod}">CASH</td>
+              <td>
+                <span
+                  th:text="${tx.amount < 0 ? 'Đã hoàn tiền' : (tx.status.name() == 'COMPLETED' ? 'Đã thanh toán' : 'Chưa thanh toán')}"
+                  th:classappend="${tx.amount < 0 ? 'badge bg-danger' : (tx.status.name() == 'COMPLETED' ? 'badge bg-success' : 'badge bg-warning text-dark')}"
+                >
+                </span>
+              </td>
 
-                    <td>
-                            <span th:text="${tx.status}"
-                                  th:classappend="${tx.status.name() == 'COMPLETED'} ? 'badge bg-success' :
-                                                   (${tx.status.name() == 'PENDING'} ? 'badge bg-warning text-dark' : 'badge bg-danger')">
-                            </span>
-                    </td>
-
-                    <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(tx.amount, 0, 'COMMA', 0, 'POINT')}"></td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
+              <td
+                class="text-end fw-bold"
+                th:classappend="${tx.amount < 0 ? 'text-danger' : ''}"
+                th:text="${#numbers.formatDecimal(tx.amount, 0, 'COMMA', 0, 'POINT')}"
+              ></td>
+              <td class="text-end">
+                <a
+                  th:if="${tx.status.name() == 'COMPLETED'}"
+                  th:href="@{/admin/receipts/transaction/{id}(id=${tx.id})}"
+                  class="btn btn-sm btn-outline-secondary"
+                  >Xuất hóa đơn</a
+                >
+                <span
+                  th:if="${tx.status.name() != 'COMPLETED'}"
+                  class="text-muted small"
+                  >-</span
+                >
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-</div>
 
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script th:inline="javascript">
+      /*<![CDATA[*/
+      const reportData = /*[[${reportData}]]*/ [];
+
+      // Nhóm dữ liệu theo ngày
+      const dailyRevenue = {};
+      reportData.forEach((tx) => {
+        if (tx.status === "COMPLETED") {
+          const date = new Date(tx.transactionDate);
+          const dateStr = date.toLocaleDateString("vi-VN");
+
+          if (!dailyRevenue[dateStr]) {
+            dailyRevenue[dateStr] = 0;
+          }
+          dailyRevenue[dateStr] += tx.amount;
+        }
+      });
+
+      // Sắp xếp theo ngày
+      const sortedDates = Object.keys(dailyRevenue).sort((a, b) => {
+        const [dayA, monthA, yearA] = a.split("/");
+        const [dayB, monthB, yearB] = b.split("/");
+        return (
+          new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB)
+        );
+      });
+
+      const labels = sortedDates;
+      const data = sortedDates.map((date) => dailyRevenue[date]);
+
+      // Tạo biểu đồ
+      const ctx = document.getElementById("revenueChart").getContext("2d");
+      new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: "Doanh thu (VNĐ)",
+              data: data,
+              backgroundColor: "rgba(54, 162, 235, 0.5)",
+              borderColor: "rgba(54, 162, 235, 1)",
+              borderWidth: 1,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              display: true,
+              position: "top",
+            },
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  let label = context.dataset.label || "";
+                  if (label) {
+                    label += ": ";
+                  }
+                  label +=
+                    new Intl.NumberFormat("vi-VN").format(context.parsed.y) +
+                    " VNĐ";
+                  return label;
+                },
+              },
+            },
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function (value) {
+                  return new Intl.NumberFormat("vi-VN").format(value);
+                },
+              },
+            },
+          },
+        },
+      });
+      /*]]>*/
+    </script>
+  </div>
 </html>

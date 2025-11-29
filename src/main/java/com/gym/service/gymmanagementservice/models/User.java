@@ -4,8 +4,11 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -16,7 +19,10 @@ import java.util.List;
 
 @Entity
 @Table(name = "users")
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString(exclude = {"memberProfile"})
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
@@ -24,6 +30,7 @@ public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @Column(name = "fullname", length = 100)
@@ -32,7 +39,7 @@ public class User implements UserDetails {
     @Column(name = "phone_number", length = 10, nullable = false, unique = true)
     private String phoneNumber;
 
-    @Column(name = "email", length = 100, unique = true)
+    @Column(name = "email", length = 100, nullable = true)
     private String email;
 
     @Column(name = "password", length = 200, nullable = false)

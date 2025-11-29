@@ -20,6 +20,7 @@ public class TransactionReportDTO {
     private String createdByStaffName; // Tên nhân viên
     private String transactionType; // "Gói tập" hay "Sản phẩm"
     private String description; // Tên gói tập / ID hóa đơn
+    private String buyerName;
 
     /**
      * Hàm chuyển đổi từ Entity Transaction sang DTO
@@ -27,26 +28,50 @@ public class TransactionReportDTO {
     public static TransactionReportDTO fromTransaction(Transaction tx) {
         String type = "Không xác định";
         String desc = "N/A";
+        String buyer = "-";
 
         if (tx.getMemberPackage() != null) {
-            type = "Gói tập";
+            // Phân loại theo TransactionKind
+            if (tx.getKind() != null) {
+                switch (tx.getKind()) {
+                    case SUBSCRIPTION_NEW:
+                        type = "Gói tập";
+                        break;
+                    case SUBSCRIPTION_RENEW:
+                        type = "Gia hạn";
+                        break;
+                    case SUBSCRIPTION_UPGRADE:
+                        type = "Nâng cấp";
+                        break;
+                    case REFUND:
+                        type = "Hoàn tiền";
+                        break;
+                    default:
+                        type = "Gói tập";
+                }
+            } else {
+                type = "Gói tập";
+            }
+            
             // Tải tên gói (Lưu ý: có thể gây N+1 query nếu không Eager)
             desc = tx.getMemberPackage().getGymPackage().getName();
+            buyer = tx.getMemberPackage().getMember() != null ? tx.getMemberPackage().getMember().getFullName() : "-";
         } else if (tx.getSale() != null) {
-            type = "Bán lẻ (POS)";
+            type = "Bán lẻ";
             desc = "Hóa đơn #" + tx.getSale().getId();
+            buyer = tx.getSale().getMember() != null ? tx.getSale().getMember().getFullName() : "Khách vãng lai";
         }
 
         return TransactionReportDTO.builder()
                 .id(tx.getId())
-                .transactionDate(tx.getTransactionDate())
-                .amount(tx.getAmount())
+                .transactionDate(tx.getTransactionDate() != null ? tx.getTransactionDate() : java.time.OffsetDateTime.now())
+                .amount(tx.getAmount() != null ? tx.getAmount() : java.math.BigDecimal.ZERO)
                 .paymentMethod(tx.getPaymentMethod())
                 .status(tx.getStatus())
-                // Tải tên nhân viên (Lưu ý: có thể gây N+1 query nếu không Eager)
-                .createdByStaffName(tx.getCreatedBy().getFullName())
+                .createdByStaffName(tx.getCreatedBy() != null ? tx.getCreatedBy().getFullName() : "-")
                 .transactionType(type)
                 .description(desc)
+                .buyerName(buyer)
                 .build();
     }
 }
