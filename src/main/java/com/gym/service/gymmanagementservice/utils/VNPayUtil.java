@@ -35,6 +35,10 @@ public class VNPayUtil {
     }
 
     public static String createPaymentUrl(HttpServletRequest req, VNPayConfig config, Long transactionId, BigDecimal amount) {
+        return createPaymentUrl(req, config, transactionId, amount, null);
+    }
+
+    public static String createPaymentUrl(HttpServletRequest req, VNPayConfig config, Long transactionId, BigDecimal amount, String source) {
         String vnp_Version = "2.1.0";
         String vnp_Command = "pay";
         String vnp_OrderInfo = "Thanh toan don hang:" + transactionId;
@@ -61,7 +65,13 @@ public class VNPayUtil {
             locate = "vn";
         }
         vnp_Params.put("vnp_Locale", locate);
-        vnp_Params.put("vnp_ReturnUrl", config.getReturnUrl()); // Sử dụng returnUrl từ config
+        
+        // Thêm source vào return URL nếu có (để phân biệt admin web vs mobile app)
+        String returnUrl = config.getReturnUrl();
+        if (source != null && !source.isEmpty()) {
+            returnUrl += (returnUrl.contains("?") ? "&" : "?") + "source=" + URLEncoder.encode(source, StandardCharsets.UTF_8);
+        }
+        vnp_Params.put("vnp_ReturnUrl", returnUrl);
         vnp_Params.put("vnp_IpAddr", vnp_IpAddr);
 
         Calendar cld = Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));

@@ -54,7 +54,6 @@
                                     <div class="d-flex align-items-center gap-1 flex-wrap">
                                       <span th:if="${student.hasAttendance}" class="badge bg-success" style="font-size: 0.75rem;">✓ Đã đi tập</span>
                                       <span th:unless="${student.hasAttendance}" class="badge bg-warning" style="font-size: 0.75rem;">Chưa đi tập</span>
-                                      <span th:if="${student.remainingSessions != null}" class="badge bg-info" style="font-size: 0.75rem;" th:text="'Còn ' + ${student.remainingSessions} + ' buổi'">Còn X buổi</span>
                                     </div>
                                   </div>
                                 </th:block>

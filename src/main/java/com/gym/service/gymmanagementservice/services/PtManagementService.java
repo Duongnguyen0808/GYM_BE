@@ -32,20 +32,19 @@ public class PtManagementService {
         OffsetDateTime now = OffsetDateTime.now();
         OffsetDateTime startOfMonth = now.withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
 
-        // 1. Số học viên đang có gói PT active
-        List<MemberPackage> activePackages = memberPackageRepository.findAll().stream()
-                .filter(mp -> mp.getAssignedPt() != null 
-                        && mp.getAssignedPt().getId().equals(ptId)
-                        && mp.getGymPackage().getPackageType() == PackageType.PT_SESSION
-                        && mp.getStatus() == SubscriptionStatus.ACTIVE)
-                .collect(Collectors.toList());
+        // 1. Số học viên đang có gói PT active (query trực tiếp từ database để lấy dữ liệu mới nhất)
+        List<MemberPackage> activePackages = memberPackageRepository
+                .findByAssignedPtIdAndStatusAndGymPackage_PackageType(
+                        ptId, 
+                        SubscriptionStatus.ACTIVE, 
+                        PackageType.PT_SESSION);
 
         long activeStudents = activePackages.stream()
                 .map(mp -> mp.getMember().getId())
                 .distinct()
                 .count();
 
-        // 2. Tổng số học viên từ trước đến nay
+        // 2. Tổng số học viên từ trước đến nay (lấy tất cả package PT của PT này, không phân biệt status)
         Set<Long> allStudentIds = memberPackageRepository.findAll().stream()
                 .filter(mp -> mp.getAssignedPt() != null 
                         && mp.getAssignedPt().getId().equals(ptId)
@@ -172,12 +171,13 @@ public class PtManagementService {
                     Map<String, Object> ptInfo = new HashMap<>();
                     ptInfo.put("pt", pt);
                     
-                    // Thống kê nhanh
-                    long activeStudents = memberPackageRepository.findAll().stream()
-                            .filter(mp -> mp.getAssignedPt() != null 
-                                    && mp.getAssignedPt().getId().equals(pt.getId())
-                                    && mp.getGymPackage().getPackageType() == PackageType.PT_SESSION
-                                    && mp.getStatus() == SubscriptionStatus.ACTIVE)
+                    // Thống kê nhanh (query trực tiếp từ database)
+                    List<MemberPackage> activePackages = memberPackageRepository
+                            .findByAssignedPtIdAndStatusAndGymPackage_PackageType(
+                                    pt.getId(), 
+                                    SubscriptionStatus.ACTIVE, 
+                                    PackageType.PT_SESSION);
+                    long activeStudents = activePackages.stream()
                             .map(mp -> mp.getMember().getId())
                             .distinct()
                             .count();

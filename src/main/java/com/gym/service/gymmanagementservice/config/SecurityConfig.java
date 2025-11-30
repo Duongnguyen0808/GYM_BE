@@ -117,13 +117,16 @@ public class SecurityConfig {
                 .rememberMe(remember -> remember
                         .key("gym-remember-key")
                         .rememberMeCookieName("GYM_REMEMBER_ME")
-                        .tokenValiditySeconds(60 * 60 * 24 * 30)
-                        .alwaysRemember(true)
+                        .tokenValiditySeconds(60 * 60 * 24 * 30) // 30 ngày
+                        .alwaysRemember(true) // Luôn nhớ đăng nhập (chỉ đăng nhập lại khi logout)
                         .userDetailsService(userDetailsService)
                 )
                 .logout(logout -> logout
                         .logoutUrl("/logout")
                         .logoutSuccessUrl("/login?logout")
+                        .deleteCookies("JSESSIONID", "GYM_REMEMBER_ME") // Xóa session và remember me cookie khi logout
+                        .clearAuthentication(true)
+                        .invalidateHttpSession(true)
                         .permitAll()
                 )
                 .exceptionHandling(ex -> ex

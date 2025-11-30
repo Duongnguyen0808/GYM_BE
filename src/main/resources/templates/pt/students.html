@@ -72,9 +72,19 @@
                 <td th:text="${student.timeSlotDisplay}">Time Slot</td>
                 <td>
                   <th:block th:if="${student.allowedWeekdaysDisplay != null and student.allowedWeekdaysDisplay != '-'}">
-                    <div class="d-flex flex-wrap gap-1">
-                      <span th:each="day,iterStat : ${#strings.arraySplit(student.allowedWeekdaysDisplay, ', ')}">
-                        <span class="badge bg-info text-white" style="font-size: 0.75rem; padding: 0.35em 0.65em;" th:text="${day.trim()}">Thứ</span>
+                    <div class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded" 
+                         style="background-color: #f0f4ff; border: 1px solid #c7d2fe;">
+                      <span class="text-muted small" style="font-size: 0.75rem;">📅</span>
+                      <span class="text-primary fw-semibold" style="font-size: 0.85rem; letter-spacing: 0.5px;">
+                        <th:block th:with="days=${#strings.arraySplit(student.allowedWeekdaysDisplay, ', ')}">
+                          <th:block th:each="day,iterStat : ${days}">
+                            <th:block th:with="dayTrimmed=${day.trim()}">
+                              <span th:if="${dayTrimmed.startsWith('Thứ ')}" th:text="${dayTrimmed.substring(5)}">2</span>
+                              <span th:unless="${dayTrimmed.startsWith('Thứ ')}" th:text="${dayTrimmed}">CN</span>
+                            </th:block>
+                            <span th:if="${!iterStat.last}">, </span>
+                          </th:block>
+                        </th:block>
                       </span>
                     </div>
                   </th:block>

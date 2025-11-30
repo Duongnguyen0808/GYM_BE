@@ -61,6 +61,19 @@ public interface MemberPackageRepository extends JpaRepository<MemberPackage, Lo
             @org.springframework.data.repository.query.Param("status") SubscriptionStatus status,
             @org.springframework.data.repository.query.Param("packageType") PackageType packageType);
     
+    // Tìm tất cả MemberPackage PT active của một PT (dùng cho danh sách học viên - lấy dữ liệu mới nhất)
+    @org.springframework.data.jpa.repository.Query("SELECT DISTINCT mp FROM MemberPackage mp " +
+            "JOIN FETCH mp.member m " +
+            "JOIN FETCH mp.gymPackage gp " +
+            "LEFT JOIN FETCH mp.assignedPt pt " +
+            "WHERE pt.id = :ptId " +
+            "AND mp.status = :status " +
+            "AND gp.packageType = :packageType")
+    List<MemberPackage> findByAssignedPtIdAndStatusAndGymPackage_PackageType(
+            @org.springframework.data.repository.query.Param("ptId") Long ptId,
+            @org.springframework.data.repository.query.Param("status") SubscriptionStatus status,
+            @org.springframework.data.repository.query.Param("packageType") PackageType packageType);
+    
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.data.jpa.repository.Query(value = "DELETE FROM member_packages WHERE member_id = :memberId", nativeQuery = true)
     void deleteAllByMemberId(@org.springframework.data.repository.query.Param("memberId") Long memberId);

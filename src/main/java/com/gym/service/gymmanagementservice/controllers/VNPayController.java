@@ -1,6 +1,9 @@
 package com.gym.service.gymmanagementservice.controllers;
 
 import com.gym.service.gymmanagementservice.dtos.SubscriptionRequestDTO;
+import com.gym.service.gymmanagementservice.models.Role;
+import com.gym.service.gymmanagementservice.models.Transaction;
+import com.gym.service.gymmanagementservice.repositories.TransactionRepository;
 import com.gym.service.gymmanagementservice.services.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -22,6 +25,7 @@ import java.util.Map;
 public class VNPayController {
 
     private final PaymentService paymentService;
+    private final TransactionRepository transactionRepository;
 
     // Endpoint này được gọi từ Frontend để bắt đầu thanh toán GÓI TẬP
     @PostMapping("/create-subscription-payment")
@@ -66,11 +70,42 @@ public class VNPayController {
     @Operation(summary = "Endpoint xử lý khi người dùng được chuyển về từ VNPay (Public)")
     public RedirectView handleVNPayReturn(@RequestParam Map<String, String[]> params) {
         String responseCode = params.get("vnp_ResponseCode")[0];
-        String redirectUrl = "http://your-frontend-domain.com/payment-result?"; // Thay bằng URL frontend của bạn
-        redirectUrl += "success=" + ("00".equals(responseCode));
-        redirectUrl += "&orderId=" + params.get("vnp_TxnRef")[0];
-        // Thêm các tham số khác nếu cần
-
-        return new RedirectView(redirectUrl);
+        boolean success = "00".equals(responseCode);
+        boolean canceled = "24".equals(responseCode);
+        String transactionIdStr = params.containsKey("vnp_TxnRef") && params.get("vnp_TxnRef").length > 0 
+            ? params.get("vnp_TxnRef")[0] : "";
+        
+        // Kiểm tra transaction để xác định nguồn thanh toán (admin web vs mobile app)
+        // Dựa vào role của user tạo transaction
+        boolean isFromAdminWeb = false;
+        if (!transactionIdStr.isEmpty()) {
+            try {
+                Long transactionId = Long.parseLong(transactionIdStr);
+                Transaction transaction = transactionRepository.findById(transactionId).orElse(null);
+                if (transaction != null && transaction.getCreatedBy() != null) {
+                    Role userRole = transaction.getCreatedBy().getRole();
+                    // Nếu user tạo transaction là ADMIN hoặc STAFF, đó là thanh toán từ Admin web
+                    isFromAdminWeb = (userRole == Role.ADMIN || userRole == Role.STAFF);
+                }
+            } catch (Exception e) {
+                // Nếu không parse được transactionId hoặc không tìm thấy transaction, 
+                // mặc định là mobile app
+            }
+        }
+        
+        // Nếu thanh toán từ Admin web, redirect về trang thống kê
+        if (isFromAdminWeb) {
+            return new RedirectView("/admin/reports/sales");
+        }
+        
+        // Nếu thanh toán từ mobile app, redirect về deep link
+        String status = success ? "success" : (canceled ? "canceled" : "failed");
+        String deepLink = "gymapp://payment-result?status=" + status;
+        if (!transactionIdStr.isEmpty()) {
+            deepLink += "&transactionId=" + transactionIdStr;
+        }
+        
+        // Redirect to deep link - this will open the mobile app
+        return new RedirectView(deepLink);
     }
 }

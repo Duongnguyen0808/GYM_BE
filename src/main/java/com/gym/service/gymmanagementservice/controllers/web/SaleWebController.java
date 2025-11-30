@@ -96,9 +96,9 @@ public class SaleWebController {
                 redirectAttributes.addFlashAttribute("successMessage", "Thanh toán thành công!");
                 return "redirect:/pos";
             } else if (request.getPaymentMethod() == com.gym.service.gymmanagementservice.models.PaymentMethod.VN_PAY) {
-                // Thanh toán qua VNPay
+                // Thanh toán qua VNPay từ Admin web
                 com.gym.service.gymmanagementservice.models.Sale pendingSale = saleService.createPendingSale(request);
-                String vnpUrl = paymentService.createSalePaymentUrl(httpRequest, pendingSale.getId());
+                String vnpUrl = paymentService.createSalePaymentUrl(httpRequest, pendingSale.getId(), "admin");
                 return "redirect:" + vnpUrl;
             } else {
                 redirectAttributes.addFlashAttribute("errorMessage", "Hình thức thanh toán không hỗ trợ.");

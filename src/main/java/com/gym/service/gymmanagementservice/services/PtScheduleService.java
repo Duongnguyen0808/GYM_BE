@@ -134,8 +134,6 @@ public class PtScheduleService {
         
         // Sử dụng formatter để đảm bảo format dateKey nhất quán với template
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        
-        Map<Long, Integer> weeklySessionCounters = new HashMap<>(); // packageId -> số buổi đã xếp trong tuần (để hiển thị còn bao nhiêu)
 
         for (TimeSlot slot : TimeSlot.values()) {
             for (int i = 0; i < 7; i++) {
@@ -202,10 +200,10 @@ public class PtScheduleService {
                             Long memberId = mp.getMember().getId();
                             Long packageId = mp.getId();
 
+                            // Lấy số buổi còn lại thực tế từ database (đã được cập nhật khi check-in)
+                            // remainingSessions trong database đã được trừ khi check-in, nên chỉ cần hiển thị giá trị này
                             int remainingSessions = mp.getRemainingSessions() != null ? mp.getRemainingSessions() : 0;
-                            int usedThisWeek = weeklySessionCounters.getOrDefault(packageId, 0);
-                            int displayRemaining = Math.max(remainingSessions - usedThisWeek, 0);
-                            weeklySessionCounters.put(packageId, usedThisWeek + 1);
+                            int displayRemaining = remainingSessions;
                             
                             // Kiểm tra attendance cho học viên này trong ngày này
                             boolean hasAttendance = sessionLogs.stream()
@@ -251,12 +249,12 @@ public class PtScheduleService {
                             Long memberId = b.getMemberPackage().getMember().getId();
                             Long packageId = b.getMemberPackage().getId();
                             
+                            // Lấy số buổi còn lại thực tế từ database (đã được cập nhật khi check-in)
+                            // remainingSessions trong database đã được trừ khi check-in, nên chỉ cần hiển thị giá trị này
                             int remainingSessions = b.getMemberPackage().getRemainingSessions() != null
                                     ? b.getMemberPackage().getRemainingSessions()
                                     : 0;
-                            int usedThisWeek = weeklySessionCounters.getOrDefault(packageId, 0);
-                            int displayRemaining = Math.max(remainingSessions - usedThisWeek, 0);
-                            weeklySessionCounters.put(packageId, usedThisWeek + 1);
+                            int displayRemaining = remainingSessions;
 
                             // Kiểm tra attendance cho học viên này
                             boolean hasAttendance = sessionLogs.stream()

@@ -362,8 +362,8 @@ public class MemberWebController {
             if ("create".equals(action)) {
                 // Kiểm tra payment method
                 if (request.getPaymentMethod() == com.gym.service.gymmanagementservice.models.PaymentMethod.VN_PAY) {
-                    // Thanh toán qua VNPay
-                    String vnpUrl = paymentService.createSubscriptionPaymentUrl(httpRequest, request.getMemberId(), request.getPackageId());
+                    // Thanh toán qua VNPay từ Admin web
+                    String vnpUrl = paymentService.createSubscriptionPaymentUrl(httpRequest, request.getMemberId(), request.getPackageId(), "admin");
                     return "redirect:" + vnpUrl;
                 } else {
                     subscriptionService.createSubscription(request);
@@ -372,9 +372,9 @@ public class MemberWebController {
             } else if ("renew".equals(action)) {
                 // Gia hạn cũng cần check payment method
                 if (request.getPaymentMethod() == com.gym.service.gymmanagementservice.models.PaymentMethod.VN_PAY) {
-                    // Thanh toán qua VNPay
+                    // Thanh toán qua VNPay từ Admin web
                     String vnpUrl = paymentService.createRenewPaymentUrl(httpRequest, request.getMemberId(), 
-                            request.getPackageId(), request.getAssignedPtId());
+                            request.getPackageId(), request.getAssignedPtId(), "admin");
                     return "redirect:" + vnpUrl;
                 } else {
                     subscriptionService.renewSubscription(request);
@@ -479,7 +479,7 @@ public class MemberWebController {
             // Kiểm tra payment method
             if (paymentMethod == com.gym.service.gymmanagementservice.models.PaymentMethod.VN_PAY) {
                 // Thanh toán qua VNPay
-                String vnpUrl = paymentService.createUpgradePaymentUrl(httpRequest, subId, newPackageId);
+                String vnpUrl = paymentService.createUpgradePaymentUrl(httpRequest, subId, newPackageId, "admin");
                 return "redirect:" + vnpUrl;
             } else {
                 subscriptionService.upgradeSubscription(subId, newPackageId, paymentMethod);

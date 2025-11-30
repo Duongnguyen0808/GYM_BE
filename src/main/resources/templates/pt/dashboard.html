@@ -90,10 +90,6 @@
                                class="rounded-3 px-2 py-2 text-white text-center"
                                style="background-color: #1d72f3;">
                             <div class="fw-semibold" th:text="${student.memberName}">Tên học viên</div>
-                            <div class="small"
-                                 th:text="'Còn ' + (${student.remainingSessionsDisplay} != null ? ${student.remainingSessionsDisplay} : 0) + ' buổi'">
-                              Còn X buổi
-                            </div>
                           </div>
                         </div>
                       </th:block>
